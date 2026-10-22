@@ -1,0 +1,49 @@
+/* 工作台三块：造价清单对量表、成本 S 曲线、标准层平面图 */
+.bench { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.bench h3 { font-size: 16px; margin-top: 10px; }
+.phd { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.demo {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--dim);
+  border: 1px solid rgba(111, 151, 170, .6); padding: 1px 6px; white-space: nowrap;
+}
+.cap { font-size: 12.5px; color: var(--dim); line-height: 1.7; margin-top: 10px; }
+
+/* BOQ table */
+.tbl { overflow-x: auto; margin-top: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th {
+  font-family: var(--mono); font-weight: 400; font-size: 10.5px; letter-spacing: .14em; color: var(--dim);
+  text-align: left; padding: 0 6px 7px; border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+td { padding: 8px 6px; border-bottom: 1px solid rgba(69, 243, 255, .09); white-space: nowrap; }
+td.c { font-family: var(--mono); color: var(--cyan); letter-spacing: .04em; }
+td.u { font-family: var(--mono); color: var(--dim); }
+.chip { font-size: 11px; padding: 1px 7px; border: 1px solid currentColor; }
+.ok { color: var(--cyan); }
+.df { color: var(--org); }
+.wt { color: var(--dim); }
+
+/* charts */
+.chart { display: block; width: 100%; height: auto; margin-top: 12px; }
+.chart text { font-family: var(--mono); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--dim); margin-top: 6px; }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--cyan); vertical-align: middle; margin-right: 6px; }
+.legend i.p { border-top-style: dashed; }
+.legend i.a { border-color: var(--org); }
+.legend i.t { border-color: var(--dim); border-top-style: dotted; }
+
+/* cost breakdown bar */
+.stack { display: flex; height: 10px; margin-top: 14px; gap: 2px; }
+.stack span { display: block; height: 100%; }
+.stackl { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--dim); margin-top: 7px; }
+.stackl i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; }
+.s1 { background: var(--cyan); }
+.s2 { background: rgba(69, 243, 255, .55); }
+.s3 { background: rgba(69, 243, 255, .3); }
+.s4 { background: var(--org); }
+.s5 { background: var(--dim); }
+
+@media (max-width: 1080px) {
+  .bench { grid-template-columns: 1fr; }
+  .bench .chart { max-width: 520px; }
+}
