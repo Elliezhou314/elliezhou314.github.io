@@ -92,6 +92,31 @@
     var header = document.querySelector('header');
     if (header && header.parentNode) header.parentNode.insertBefore(tip, header.nextSibling);
     else document.body.insertBefore(tip, document.body.firstChild);
+    liftOverTour(tip);
+  }
+
+  // 第一次打开时游戏还会弹新手引导：一层全屏半透明遮罩（.tourmask，z-index 50）中间一张卡片。
+  // 提示原本在页面里，会被压在遮罩下面发暗、点不到。引导开着的时候：提示改成贴在屏幕顶上、浮在遮罩之上（pwatip-over），
+  // 遮罩上沿让出提示的高度（引导卡片在剩下的地方居中，放不下就在遮罩里滚动），两者不叠在一起；
+  // 引导关掉或提示关掉，一切回到原样。游戏代码（src/）不知道这件事，只在这里看遮罩在不在。
+  function liftOverTour(tip) {
+    function sync() {
+      var mask = document.querySelector('.tourmask');
+      var on = !!mask && !!tip.parentNode;
+      tip.classList.toggle('pwatip-over', on);
+      if (!mask) return;
+      mask.classList.toggle('pwatour-tip', on);
+      mask.style.paddingTop = on ? Math.ceil(tip.getBoundingClientRect().height + 12) + 'px' : '';
+    }
+    var mo = new MutationObserver(sync);
+    mo.observe(document.body, { childList: true });
+    window.addEventListener('resize', sync);
+    tip.querySelector('.pwatipclose').addEventListener('click', function () {
+      mo.disconnect();
+      window.removeEventListener('resize', sync);
+      sync();
+    });
+    sync();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showTip);
   else showTip();

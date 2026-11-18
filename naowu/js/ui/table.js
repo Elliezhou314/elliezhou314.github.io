@@ -18,6 +18,7 @@ __squidDefine('src/ui/table.js', function (exports) {
 // 尺寸：用 ResizeObserver 量牌桌宽度，把牌宽等写成像素 CSS 变量，窄于 NARROW 像素时加 narrow 类。
 // 不用容器查询和 cqw（旧安卓内核不认），也不用独立的 translate/rotate/scale 属性：
 // 居中定位的 transform 写在外层元素上，动画只动内层，互不覆盖。
+const { placeBubble } = __squidRequire('src/ui/bubble.js');
 const { cardEl, setCardFace } = __squidRequire('src/ui/cards.js');
 const { f1 } = __squidRequire('src/ui/dom.js');
 const { sfx } = __squidRequire('src/ui/sfx.js');
@@ -63,15 +64,17 @@ function createTable(root) {
 
   // ---------------------------------------------------------------- 静态画法
   function build(view) {
-    for (const s of T.seats) { clearTimeout(s.sayTimer); s.el.remove(); s.bet.remove(); }
+    for (const s of T.seats) { clearTimeout(s.sayTimer); s.el.remove(); s.bet.remove(); s.say.remove(); }
     T.seats = view.seats.map((cfg, i) => {
       const se = el('div', 'seat' + (i === view.hero ? ' me' : ''));
-      se.innerHTML = '<div class="plate"><span class="av"></span><span class="who"><b></b><i></i></span><span class="stk"></span></div><div class="hole"></div><div class="say"></div>';
+      se.innerHTML = '<div class="plate"><span class="av"></span><span class="who"><b></b><i></i></span><span class="stk"></span></div><div class="hole"></div>';
       const bet = el('div', 'bet', '<span class="bet-in"><span class="chips"></span><b></b></span>');
       bet.hidden = true;
       felt.append(se, bet);
-      return { el: se, hole: se.querySelector('.hole'), say: se.querySelector('.say'), stk: se.querySelector('.stk'), bet, cards: [], sayTimer: 0 };
+      return { el: se, hole: se.querySelector('.hole'), plate: se.querySelector('.plate'), say: null, stk: se.querySelector('.stk'), bet, betAt: null, cards: [], sayTimer: 0 };
     });
+    // 动作气泡是毡面上的独立一块（不在座位里面），摆在所有座位和下注后面画，位置由 placeSay 现算
+    for (const s of T.seats) { s.say = el('div', 'say'); felt.append(s.say); }
     boardEl.innerHTML = '';
     for (let i = 0; i < 5; i++) boardEl.append(el('span', 'slot'));
   }
@@ -173,6 +176,8 @@ function createTable(root) {
       e.style.top = px(clamp(y, h / 2 + EDGE, H - h / 2 - EDGE));
     };
     const cx = W / 2, cy = H / 2;
+    const resized = T.size !== W + 'x' + H;
+    T.size = W + 'x' + H;
     place(mark, cx, H * 0.29);
     place(boardEl, cx, H * (narrow ? 0.44 : 0.46));
     place(potEl, cx, H * (narrow ? 0.57 : 0.62));
@@ -189,13 +194,50 @@ function createTable(root) {
       if (i === hero) place(s.el, cx, H - s.el.offsetHeight / 2 - EDGE);
       else place(s.el, cx + rx * Math.cos(a), cy + ry * Math.sin(a));
       const ab = a + (22 * Math.PI) / 180;
-      place(s.bet, cx + bx * Math.cos(ab), cy + by * Math.sin(ab));
+      s.betAt = { x: cx + bx * Math.cos(ab), y: cy + by * Math.sin(ab) };
+      place(s.bet, s.betAt.x, s.betAt.y);
     });
     if (last.button >= 0 && last.button < n) {
       const a = ang(last.button) - (24 * Math.PI) / 180;
       place(dbtn, cx + bx * 1.05 * Math.cos(a), cy + by * 1.1 * Math.sin(a));
       dbtn.hidden = false;
     } else dbtn.hidden = true;
+    // 牌桌大小变了（转屏、拉窗口）：亮着的气泡跟着重新找位置。大小没变就不动它，免得气泡亮着的时候跳一下
+    // 收着的气泡（透明）也挪回左上角：它们还停在旧尺寸下的位置的话，牌桌变窄后会伸出页面右边、让手机上整页能横向滚动
+    if (resized) T.seats.forEach((s, i) => { if (s.say.classList.contains('on')) placeSay(i); else { s.say.style.left = '0px'; s.say.style.top = '0px'; } });
+  }
+
+  /** 元素相对毡面左上角的矩形 */
+  function rectOf(e, f) {
+    const r = e.getBoundingClientRect();
+    return { l: r.left - f.left, t: r.top - f.top, r: r.right - f.left, b: r.bottom - f.top };
+  }
+  /** 手牌那一块：手牌容器和里面每张牌（自己的两张是斜着放的，会探出容器一点）合起来 */
+  function holeRect(s, f) {
+    let u = rectOf(s.hole, f);
+    for (const c of s.hole.children) { const r = rectOf(c, f); u = { l: Math.min(u.l, r.l), t: Math.min(u.t, r.t), r: Math.max(u.r, r.r), b: Math.max(u.b, r.b) }; }
+    return u;
+  }
+  /** 给座位 i 的气泡找位置（见 bubble.js）：不压任何人的名牌、手牌，不压公共牌、底池、下注 */
+  function placeSay(i) {
+    const s = T.seats[i];
+    if (!s || !felt.clientWidth) return;
+    const f = felt.getBoundingClientRect();
+    const W = felt.clientWidth, H = felt.clientHeight;
+    const fs = parseFloat(felt.style.fontSize) || 13;
+    const hard = [rectOf(boardEl, f), rectOf(potEl, f)], soft = [];
+    T.seats.forEach((o, k) => {
+      hard.push(rectOf(o.plate, f), holeRect(o, f));
+      if (!o.bet.hidden) hard.push(rectOf(o.bet, f));
+      else if (o.betAt) soft.push({ l: o.betAt.x - 2.7 * fs, t: o.betAt.y - 0.75 * fs, r: o.betAt.x + 2.7 * fs, b: o.betAt.y + 0.75 * fs });   // 还没下注的人：以后下注会出现在这儿
+      if (k !== i && o.say.classList.contains('on')) soft.push(rectOf(o.say, f));
+    });
+    if (!dbtn.hidden) soft.push(rectOf(dbtn, f));
+    const p = placeBubble({ w: s.say.offsetWidth, h: s.say.offsetHeight, W, H, R: parseFloat(felt.style.borderRadius) || 0, edge: EDGE,
+      plate: rectOf(s.plate, f), hole: holeRect(s, f), cx: W / 2, hard, soft });
+    s.say.style.left = Math.round(p.x) + 'px';
+    s.say.style.top = Math.round(p.y) + 'px';
+    s.say.dataset.fit = String(p.level);
   }
 
   if (typeof ResizeObserver !== 'undefined') { T.ro = new ResizeObserver(() => layout()); T.ro.observe(root); }
@@ -223,13 +265,22 @@ function createTable(root) {
     if (!animOn()) { c.classList.remove('down'); return; }
     requestAnimationFrame(() => requestAnimationFrame(() => c.classList.remove('down')));
   }
-  function say(view) {
+  /** 亮出动作气泡。要在这一步的下注摆好之后叫（找位置时要让开它们）；hold 为真时不自动收（只给测试钩子用） */
+  function say(view, hold) {
     if (!view.say || !T.seats[view.say.seat]) return;
-    const s = T.seats[view.say.seat];
+    const i = view.say.seat, s = T.seats[i];
     clearTimeout(s.sayTimer);
     s.say.textContent = view.say.text;
+    placeSay(i);
     s.say.classList.add('on');
-    s.sayTimer = setTimeout(() => s.say.classList.remove('on'), 1100);
+    if (!hold) s.sayTimer = setTimeout(() => s.say.classList.remove('on'), 1100);
+  }
+  // 测试钩子（tools/uicheck_bubble.mjs）：让第 seat 家亮出文字为 text 的气泡并一直亮着，hide() 全部收掉。只读写气泡，不碰牌局
+  if (typeof window !== 'undefined') {
+    window.__squidTableTest = {
+      say: (seat, text) => say({ say: { seat, text } }, true),
+      hide: () => { for (const s of T.seats) { clearTimeout(s.sayTimer); s.say.classList.remove('on'); } },
+    };
   }
 
   // ---------------------------------------------------------------- 演出
@@ -306,7 +357,6 @@ function createTable(root) {
     if (view.awards && !prev.awards) view.seats.forEach((s, i) => { if (s.win) winners.add(i); });
     syncPlates(view, winners);
     for (const s of T.seats) s.el.classList.remove('acting');
-    say(view);
     // 1) 收池：本街有人下过注、而新画面里桌上的注变少了
     const collecting = prev.seats.some((s, i) => s.bet > 0 && !(view.seats[i].bet >= s.bet));
     if (collecting) {
@@ -321,6 +371,8 @@ function createTable(root) {
     });
     if (popped) { sfx.chip(); layout(); }
     if (!collecting) setPot(view.pot, false);
+    // 动作气泡在这一步的下注摆好之后亮（带动作的画面不会收池，所以和下注是同一刻出来的）
+    say(view);
     // 3) 摊牌：对手的牌翻开
     let shown = false;
     view.seats.forEach((cfg, i) => {
