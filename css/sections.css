@@ -32,6 +32,8 @@
 .b-contact{text-align:center;padding:clamp(48px,6vw,86px) 0 clamp(40px,5vw,70px)}
 .b-contact small{display:block;font-family:var(--song);font-size:12px;letter-spacing:.6em;padding-left:.6em;color:var(--dim)}
 .b-contact a{display:inline-block;margin-top:20px;font:400 clamp(17px,1.9vw,23px) var(--futura);letter-spacing:.14em;padding:0 0 8px .14em;border-bottom:1px solid var(--ink);overflow-wrap:anywhere}
+.b-contact .sub{display:block;width:max-content;margin:24px auto 0;padding:0 0 6px .4em;font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--dim);border-bottom-color:var(--hair)}
+.b-contact .sub:hover{color:var(--ink);border-bottom-color:var(--ink)}
 
 @media (max-width:860px){
   .b-top{grid-template-columns:1fr;justify-items:center;gap:14px}.b-top nav,.b-top .r{display:none}
