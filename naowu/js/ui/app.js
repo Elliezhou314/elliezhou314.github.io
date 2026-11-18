@@ -14,7 +14,7 @@ const { buildContestView } = __squidRequire('src/ui/views/contest.js');
 const { flushSrs, buildDrillView, startDrill } = __squidRequire('src/ui/views/drill.js');
 const { buildHelpView } = __squidRequire('src/ui/views/help.js');
 const { buildLabView } = __squidRequire('src/ui/views/lab.js');
-const { buildPlayView } = __squidRequire('src/ui/views/play.js');
+const { buildPlayView, openReplay } = __squidRequire('src/ui/views/play.js');
 const { buildPreflopView } = __squidRequire('src/ui/views/preflop.js');
 const { buildReviewView } = __squidRequire('src/ui/views/review.js');
 const { buildSolverView } = __squidRequire('src/ui/views/solver.js');
@@ -43,7 +43,8 @@ registerNavigation(switchView, {
   campaign: buildCampaignView, contest: buildContestView, lab: buildLabView,
   solver: buildSolverView, drill: buildDrillView, play: buildPlayView,
   review: buildReviewView, preflop: buildPreflopView, help: buildHelpView, speed: buildSpeedView,
-}, startLevel, (sc) => { switchView('drill'); return startDrill(sc); });
+}, startLevel, (sc) => { switchView('drill'); return startDrill(sc); },
+(rec) => { switchView('play'); if (document.getElementById('view-play').classList.contains('active')) openReplay(rec); });
 
 document.querySelectorAll('#nav button').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
 window.addEventListener('pagehide', flushSrs);

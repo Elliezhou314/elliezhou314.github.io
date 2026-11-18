@@ -6,6 +6,7 @@ const { createSolver, runSolve, serialize, exploitAnalysis, VILLAIN_MODELS, MAX_
 const { equityHandVsRange, equityRangeVsRange, equityMultiway } = __squidRequire('src/core/equity.js');
 const { parseRange } = __squidRequire('src/core/range.js');
 const { buildEquityTable169, buildPreflopTree, PreflopSolver } = __squidRequire('src/solver/preflop.js');
+const { hindsightEquity } = __squidRequire('src/review/hindsight.js');
 const { getPuzzle } = __squidRequire('src/train/puzzles.js');
 const { makeVariant } = __squidRequire('src/train/variants/index.js');
 
@@ -180,6 +181,18 @@ self.onmessage = async (e) => {
         const q = makeVariant(msg.variantType, msg.seed);
         const r = q.compute();
         self.postMessage({ id: msg.id, type: 'result', value: r.value, evidence: r.evidence || '', detail: r.detail || null, statement: q.statement });
+        break;
+      }
+      case 'hindsight': {
+        // 牌局回放的「事后视角」：一手牌里每个要算的局面（还没弃牌的人的真实手牌 + 当时的公共牌）各算一次。
+        // 翻前那几个要抽样 4 万次，放主线程手机上会顿一下，所以在这里算；逐个回报进度，界面写明在算什么。
+        const results = [];
+        for (let k = 0; k < msg.jobs.length; k++) {
+          const j = msg.jobs[k];
+          results.push(hindsightEquity(j.hands, j.board));
+          self.postMessage({ id: msg.id, type: 'progress', done: k + 1, total: msg.jobs.length });
+        }
+        self.postMessage({ id: msg.id, type: 'result', results });
         break;
       }
       case 'equity': {

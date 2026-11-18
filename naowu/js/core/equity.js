@@ -341,6 +341,7 @@ function equityMultiway(hands, board, opts = {}) {
   const dead = hands.flat();
   const buf = new Int32Array(7);
   const shares = new Float64Array(n);
+  const sq = new Float64Array(n);   // 每次结算分到的份额的平方和：抽样时用来算标准误（翻前回放要写明误差）
   const vals = new Int32Array(n);
   let count = 0;
   const settle = (full) => {
@@ -353,7 +354,7 @@ function equityMultiway(hands, board, opts = {}) {
     }
     let winners = 0;
     for (let p = 0; p < n; p++) if (vals[p] === best) winners++;
-    for (let p = 0; p < n; p++) if (vals[p] === best) shares[p] += 1 / winners;
+    for (let p = 0; p < n; p++) if (vals[p] === best) { shares[p] += 1 / winners; sq[p] += 1 / (winners * winners); }
     count++;
   };
   if (board.length >= 3) {
@@ -376,7 +377,9 @@ function equityMultiway(hands, board, opts = {}) {
     }
     settle(full);
   }
-  return { equities: Array.from(shares, (s) => s / count), exact: false, samples };
+  // 标准误：每次抽样里这个人分到的份额（赢 1、几人平分 1/k、输 0）的样本方差 / 抽样次数，再开方
+  const stderrs = Array.from(shares, (s, p) => { const m = s / count; return Math.sqrt(Math.max(sq[p] / count - m * m, 0) / count); });
+  return { equities: Array.from(shares, (s) => s / count), exact: false, samples, stderrs };
 }
 
 // ---------------------------------------------------------------------------

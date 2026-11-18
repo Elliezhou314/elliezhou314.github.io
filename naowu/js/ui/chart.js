@@ -40,6 +40,8 @@ const STEPS = [1, 2, 3, 5, 7, 10, 14, 20, 30, 50, 100, 200, 500, 1000];
  *   xLabel  (x) => 刻度文字；xTitle 横轴说明（含单位）
  *   yMax、yStep、yUnit（刻度后缀，如 '%'）、yTitle 纵轴说明（含单位）
  *   hlines  [{ value, label, cls }]：水平参考线
+ *   vlines  [{ x, label }]：竖线，画在 x 和 x−1 两个点正中间（牌局回放用它标换街）
+ *   onPick  (p) => …：点按一个点时额外做的事（牌局回放里跳到那一步）
  *   cls     容器的附加类名；height 画布高度
  */
 function lineChart(opts) {
@@ -110,6 +112,14 @@ function render(opts, W, detailEl) {
     svg.append(el('text', { class: 'xtick', x: anchor === 'start' ? px - 2 : px, y: yBot + 6 + font, 'text-anchor': anchor }, label));
   }
   svg.append(el('line', { class: 'axis', x1: x0, x2: x1, y1: yBot, y2: yBot }));
+  // 竖线（牌局回放里标换街）：画在这个点和前一个点的正中间，标签写在图顶上，挨上了就跳过标签（线照画）
+  let vRight = -Infinity;
+  for (const v of opts.vlines || []) {
+    const px = sx(v.x - 0.5);
+    svg.append(el('line', { class: 'vline', x1: px, x2: px, y1: yTop, y2: yBot, 'data-x': v.x }));
+    const w = textWidth(v.label, font);
+    if (px + 2 > vRight + 4 && px + 2 + w <= W) { svg.append(el('text', { class: 'vlabel', x: px + 2, y: yTop - 4 }, v.label)); vRight = px + 2 + w; }
+  }
   svg.append(el('text', { class: 'atitle', x: (x0 + x1) / 2, y: H - 4, 'text-anchor': 'middle' }, opts.xTitle || ''));
 
   // 参考线：标签在线的上方，挨得太近时往上让开（从下往上排）；默认放右端，右端压住了数据点就挪到左端
@@ -147,7 +157,7 @@ function render(opts, W, detailEl) {
       g.append(el('text', { class: 'caplabel', x: right ? cx + 8 : cx - 8, y: cy + font + 4, 'text-anchor': right ? 'start' : 'end' }, p.capLabel));
     }
     g.addEventListener('mouseenter', () => show(g, p));
-    g.addEventListener('click', () => show(g, p));
+    g.addEventListener('click', () => { show(g, p); if (opts.onPick) opts.onPick(p); });
     g.addEventListener('focus', () => show(g, p));
     svg.append(g);
   }

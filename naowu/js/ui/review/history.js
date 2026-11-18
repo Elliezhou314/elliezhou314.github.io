@@ -2,9 +2,12 @@ __squidDefine('src/ui/review/history.js', function (exports) {
 'use strict';
 // 「复盘与漏洞」的「历史与数据」签：问题手牌记录（最近 60 条）、自由牌局历史、数据面板。
 // 数据面板（复制进度、粘贴导入、文件导出导入、清空）在 transfer.js；导入、清空之后经 router.js 重画相关页面（直接引用 review.js 会成环）。
+// 自由牌局历史每一手有「回放」：经 router.js 跳到自由牌局页面的回放（记录还原不了的，这里直接写明回放不了）。
 const { cardsToStr } = __squidRequire('src/core/cards.js');
+const { buildReplay } = __squidRequire('src/review/replay.js');
 const { analyzeHand } = __squidRequire('src/review/review.js');
 const { h, f1 } = __squidRequire('src/ui/dom.js');
+const { replayHand } = __squidRequire('src/ui/router.js');
 const { store } = __squidRequire('src/ui/services.js');
 const { scenarioName } = __squidRequire('src/ui/review/leaks.js');
 const { dataPanel } = __squidRequire('src/ui/review/transfer.js');
@@ -30,9 +33,11 @@ function handsList() {
   const el = h('div', { class: 'rvhands' });
   if (!hands.length) { el.append(h('span', { class: 'muted' }, '自由牌局还没有记录。')); return el; }
   for (const rec of hands) {
+    const rp = buildReplay(rec);
     el.append(h('div', { class: 'hand-log-item' },
       `第 ${rec.handNo} 手 ${cardsToStr(rec.board)} 你 ${cardsToStr(rec.seats[rec.heroSeat].hole)} 净 ${rec.result ? f1(rec.result.net[rec.heroSeat]) : '?'} `,
-      h('button', { class: 'small', onclick: () => { const an = analyzeHand(rec); el.prepend(h('pre', { class: 'review' }, an.text)); } }, '复盘')));
+      h('button', { class: 'small', onclick: () => { const an = analyzeHand(rec); el.prepend(h('pre', { class: 'review' }, an.text)); } }, '复盘'), ' ',
+      rp.ok ? h('button', { class: 'small rphist', onclick: () => replayHand(rec) }, '回放') : h('span', { class: 'muted small rpcant' }, rp.reason)));
   }
   return el;
 }

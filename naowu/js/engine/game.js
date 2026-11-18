@@ -237,10 +237,15 @@ class HandEngine {
     this._log({ kind: 'result', ...this.result });
   }
 
-  /** 可保存/复盘的手牌记录 */
+  /**
+   * 可保存/复盘的手牌记录。
+   * v 是记录格式的版本（v0.14 起写 2）：从这一版起，牌局回放（review/replay.js）用记录里每个动作自带的
+   * 底池、后手、要跟的数逐步核对还原出来的画面，核对得上才回放。没有 v 的是更早的版本记的，同样逐步核对，
+   * 对不上就如实说「回放不了」。格式本身没有变，所以旧记录多半照样能回放。
+   */
   toRecord() {
     return {
-      handNo: this.handNo, seed: this.cfg.seed, n: this.n, button: this.button, sb: this.sb, bb: this.bb, ante: this.ante,
+      v: 2, handNo: this.handNo, seed: this.cfg.seed, n: this.n, button: this.button, sb: this.sb, bb: this.bb, ante: this.ante,
       seats: this.seats.map((s) => ({ seat: s.seat, name: s.name, stack0: s.stack0, stackEnd: s.stack, hole: s.hole.slice(), isHero: s.isHero, folded: s.folded, showed: s.showed, profile: s.bot ? s.bot.profile : null })),
       board: this.board.slice(),
       history: this.history.map((h) => ({ ...h })),

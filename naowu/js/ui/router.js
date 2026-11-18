@@ -11,17 +11,25 @@ __squidDefine('src/ui/router.js', function (exports) {
 
 let navigate = null;
 const builders = {};
-const actions = { startLevel: null, startScenario: null };
+const actions = { startLevel: null, startScenario: null, replayHand: null };
 
 /**
  * app.js 在渲染任何视图之前调用一次。levelStarter 是闯关页的「开始某一关」（过关卡片的「下一关」要用）；
- * scenarioStarter 是「切到特训页、开始某个场景的训练」（错题本的「再练这个局面」要用）。
+ * scenarioStarter 是「切到特训页、开始某个场景的训练」（错题本的「再练这个局面」要用）；
+ * handReplayer 是「切到自由牌局、回放某一手」（历史与数据里每手牌的「回放」要用）。
  */
-function registerNavigation(switchViewImpl, viewBuilders, levelStarter, scenarioStarter) {
+function registerNavigation(switchViewImpl, viewBuilders, levelStarter, scenarioStarter, handReplayer) {
   navigate = switchViewImpl;
   Object.assign(builders, viewBuilders);
   actions.startLevel = levelStarter || null;
   actions.startScenario = scenarioStarter || null;
+  actions.replayHand = handReplayer || null;
+}
+
+/** 切到自由牌局页面并回放一手打完的牌（正在打的一手没结束时，那边会先问打完还是放弃） */
+function replayHand(rec) {
+  if (!actions.replayHand) throw new Error('「回放一手牌」还没登记：app.js 应在 registerNavigation 里传进来');
+  return actions.replayHand(rec);
 }
 
 /** 切到特训页并开始某个场景的训练（不是关卡），和特训地图上点场景走同一条路径 */
@@ -50,6 +58,7 @@ function refreshView(name) {
 }
 
 exports.registerNavigation = registerNavigation;
+exports.replayHand = replayHand;
 exports.startScenario = startScenario;
 exports.startLevel = startLevel;
 exports.switchView = switchView;

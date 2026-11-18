@@ -88,6 +88,7 @@ class SolverClient {
   puzzle(puzzleId) { return this._send({ type: 'puzzle', puzzleId }); }
   variant(variantType, seed) { return this._send({ type: 'variant', variantType, seed }); }
   equity(params) { return this._send({ type: 'equity', ...params }); }
+  hindsight(jobs, onProgress) { return this._send({ type: 'hindsight', jobs }, onProgress); }
   preflop(params, onProgress) { return this._send({ type: 'preflop', ...params }, onProgress); }
 }
 

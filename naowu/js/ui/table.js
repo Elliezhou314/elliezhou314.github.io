@@ -355,7 +355,17 @@ function createTable(root) {
     T.last = view;
     const newHand = !prev || prev.key !== view.key || prev.seats.length !== view.seats.length;
     if (newHand) build(view);
-    if (opts.instant || !animOn()) { T.running = false; applyInstant(view); say(view); return true; }
+    if (opts.instant || !animOn()) {
+      T.running = false;
+      // 直接到位（回放里往回走、拖进度条）：上一个画面还没消失的动作气泡要收掉，不然会挂在不相干的那一步上
+      if (opts.instant) for (const s of T.seats) { clearTimeout(s.sayTimer); s.say.classList.remove('on'); }
+      // CSS 过渡（翻牌、高亮）也不许播：先挂上 still 类关掉过渡，画到位后强制算一遍样式，再摘掉——值已经在终点，摘掉不会再起过渡
+      root.classList.add('still');
+      applyInstant(view); say(view);
+      void root.offsetHeight;
+      root.classList.remove('still');
+      return true;
+    }
     if (interrupted && !newHand) applyInstant(prev);   // 上一段被打断：先一步到它的终点，再从那里演
     T.running = true;
     if (newHand) await dealIn(view, ok);

@@ -399,5 +399,24 @@ input.betrange{width:200px;height:28px;padding:0;border:0;background:none;accent
 .xfpreview{background:var(--panel2);border:1px solid var(--accent);border-radius:8px;padding:10px;line-height:1.8}
 .xfpreview>*+*{margin-top:6px}
 .xfreset{gap:8px}
+/* 牌局回放（src/ui/replay/）：控制条每个按钮至少 44 像素高，手机上四个一排不横向滚动 */
+.replay .rphead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.replay .rphead h2{margin:0}
+.replay .rpcount{color:var(--muted);font-size:12px}
+.rpsay{font-size:15px;line-height:1.55;min-height:3.1em;padding:6px 0}
+.rpcall{color:var(--accent);font-weight:600;margin:0 0 6px}
+.rpctl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:6px 0}
+.rpctl button{min-height:44px;padding:6px 4px;min-width:0}
+.rpseek{display:block;width:100%;height:44px;margin:0;padding:0;border:0;background:none;accent-color:var(--accent)}
+.rptoggle{display:flex;align-items:center;gap:8px;min-height:44px;color:var(--text);font-size:14px;cursor:pointer}
+.rptoggle input{width:22px;height:22px;margin:0;accent-color:var(--accent)}
+.rpeq{margin:6px 0;line-height:1.6}
+.rpeq b{color:var(--accent)}
+.rpfoot{margin-top:8px}
+.rpfoot button,.replayask button{min-height:44px}
+.chart .vline{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 4}
+.chart .vlabel{fill:var(--muted)}
+/* 牌桌直接到位的那一刻（回放里往回走、拖进度条）：翻牌、高亮的过渡一律不播（ui/table.js 挂上又立刻摘掉） */
+.ptable.still *,.ptable.still *::before,.ptable.still *::after{transition:none!important}
 /* 系统要求减少动态效果：反馈动效与「更多」面板一律不播，直接停在终态 */
 @media (prefers-reduced-motion:reduce){.stars3 svg,.pill,.evbar .fill,.sheet,.spopt,.chart .pt{animation:none!important}}
