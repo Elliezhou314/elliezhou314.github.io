@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 360" width="300" height="360" preserveAspectRatio="xMidYMid slice" role="img" aria-label="一排高低不同的立柱插图">
+  <defs><filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 -.19"/></filter></defs>
+  <rect width="300" height="360" fill="#ccd2cb"/>
+  <g fill="none" stroke="#252a26" stroke-width=".9"><path d="M36 286H264"/><rect x="56" y="196" width="24" height="90"/><rect x="92" y="150" width="24" height="136"/><rect x="164" y="172" width="24" height="114"/><rect x="200" y="120" width="24" height="166"/><path d="M36 300H264" stroke-dasharray="1 5"/></g>
+  <rect x="128" y="90" width="24" height="196" fill="#22332b"/>
+  <rect width="300" height="360" filter="url(#grain)" style="mix-blend-mode:multiply"/>
+</svg>

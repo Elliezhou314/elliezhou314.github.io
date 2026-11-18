@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 360" width="300" height="360" preserveAspectRatio="xMidYMid slice" role="img" aria-label="同心弧线插图">
+  <defs><filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .5 -.19"/></filter></defs>
+  <rect width="300" height="360" fill="#ddd4c6"/>
+  <g fill="none" stroke="#2a2420" stroke-width=".9"><path d="M40 250A70 70 0 0 1 110 320M40 205A115 115 0 0 1 155 320M40 160A160 160 0 0 1 200 320M40 115A205 205 0 0 1 245 320M40 70A250 250 0 0 1 290 320"/><path d="M40 320V50M40 320H290"/><path d="M40 320L236 150" stroke-width="1.3"/></g>
+  <circle cx="156" cy="219" r="6" fill="#a4462a"/>
+  <rect width="300" height="360" filter="url(#grain)" style="mix-blend-mode:multiply"/>
+</svg>

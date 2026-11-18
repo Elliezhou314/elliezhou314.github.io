@@ -5,20 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>404 · 周丹娜</title>
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#ffffff">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #040a12; color: #dbf7ff;
-         font-family: "Share Tech Mono", ui-monospace, Consolas, "Microsoft YaHei", monospace; text-align: center; padding: 16px; }
-  b { display: block; font-size: 64px; color: #ff8a1f; letter-spacing: .1em; }
-  p { color: #6f97aa; letter-spacing: .12em; }
-  a { color: #45f3ff; }
+  @font-face { font-family: "Noto Serif SC"; font-weight: 300; font-display: swap; src: url("/fonts/notoserifsc-300.woff2") format("woff2"); }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; box-sizing: border-box;
+         background: #ffffff; color: #121211; text-align: center;
+         font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif; font-weight: 300; }
+  p { margin: 0; font-size: clamp(20px, 2.1vw, 27px); letter-spacing: .14em; }
+  a { display: inline-block; margin-top: 26px; font-size: 12px; letter-spacing: .4em; padding: 0 0 7px .4em;
+      color: inherit; text-decoration: none; border-bottom: 1px solid #121211; }
 </style>
 </head>
 <body>
   <div>
-    <b>404</b>
-    <p>图纸里没有这一页</p>
-    <p><a href="/">返回首页</a></p>
+    <p>没有这一页</p>
+    <a href="/">返回首页</a>
   </div>
 </body>
 </html>
