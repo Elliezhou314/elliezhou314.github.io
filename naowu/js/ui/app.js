@@ -2,6 +2,7 @@ __squidDefine('src/ui/app.js', function (exports) {
 'use strict';
 // 入口：登记导航、第一次渲染各视图、按地址栏的 #selftest / #demo 分派。
 const { toast } = __squidRequire('src/ui/dom.js');
+const { leaveBlocked } = __squidRequire('src/ui/leaveguard.js');
 const { markMobileNav, mountMobileNav } = __squidRequire('src/ui/mobilenav.js');
 const { DEMO } = __squidRequire('src/ui/progress.js');
 const { registerNavigation } = __squidRequire('src/ui/router.js');
@@ -10,7 +11,7 @@ const { applySettings, soundButton } = __squidRequire('src/ui/settings.js');
 const { installAudioUnlock } = __squidRequire('src/ui/sfx.js');
 const { buildCampaignView, startLevel } = __squidRequire('src/ui/views/campaign.js');
 const { buildContestView } = __squidRequire('src/ui/views/contest.js');
-const { drillState, flushSrs, buildDrillView, startDrill } = __squidRequire('src/ui/views/drill.js');
+const { flushSrs, buildDrillView, startDrill } = __squidRequire('src/ui/views/drill.js');
 const { buildHelpView } = __squidRequire('src/ui/views/help.js');
 const { buildLabView } = __squidRequire('src/ui/views/lab.js');
 const { buildPlayView } = __squidRequire('src/ui/views/play.js');
@@ -21,12 +22,8 @@ const { buildSpeedView, stopSpeed } = __squidRequire('src/ui/views/speed.js');
 const { maybeShowTour } = __squidRequire('src/ui/views/tour.js');
 
 function switchView(name) {
-  // 关卡打到一半切走会丢掉本关进度（星级要整关算完才结算），先问一句
-  if (name !== 'drill' && drillState.levelCtx && drillState.levelCtx.decisions.length > 0 && !drillState.levelCtx.finished) {
-    const n = drillState.levelCtx.decisions.length;
-    if (!confirm(`这一关已经打了 ${n} 个决策，现在离开会丢掉本关进度（星级要整关打完才结算）。确定离开吗？`)) return;
-    drillState.levelCtx = null;
-  }
+  // 关卡打到一半切走会丢掉本关进度（星级要整关算完才结算）：页面里两步确认，确定离开后再回到这里切
+  if (leaveBlocked(name, switchView)) return;
   if (name !== 'drill') flushSrs(); // 离开训练视图时结算这一段的间隔重复
   if (name !== 'speed') stopSpeed(); // 离开限时速算：这一局作废、计时器停掉（不记成绩）
   document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.view === name));

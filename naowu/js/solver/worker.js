@@ -7,6 +7,7 @@ const { equityHandVsRange, equityRangeVsRange, equityMultiway } = __squidRequire
 const { parseRange } = __squidRequire('src/core/range.js');
 const { buildEquityTable169, buildPreflopTree, PreflopSolver } = __squidRequire('src/solver/preflop.js');
 const { getPuzzle } = __squidRequire('src/train/puzzles.js');
+const { makeVariant } = __squidRequire('src/train/variants/index.js');
 
 let current = null; // { id, solver, cancelled } —— 只用于 cancel
 let eq169 = null;
@@ -171,6 +172,14 @@ self.onmessage = async (e) => {
         if (!p) throw new Error('没有这道题：' + msg.puzzleId);
         const r = p.compute();
         self.postMessage({ id: msg.id, type: 'result', value: r.value, evidence: r.evidence || '', detail: r.detail || null });
+        break;
+      }
+      case 'variant': {
+        // 变式练习按「题型 + 种子」在这里重新出同一道题再算：五张牌的牌型要判 2598960 手、公共牌发 5 张要查 2118760 种发法，
+        // 放主线程手机上会卡。出题只由种子决定，所以这边出的题和页面上显示的是同一道（tools/uicheck 核对过）。
+        const q = makeVariant(msg.variantType, msg.seed);
+        const r = q.compute();
+        self.postMessage({ id: msg.id, type: 'result', value: r.value, evidence: r.evidence || '', detail: r.detail || null, statement: q.statement });
         break;
       }
       case 'equity': {

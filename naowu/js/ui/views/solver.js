@@ -4,7 +4,11 @@ __squidDefine('src/ui/views/solver.js', function (exports) {
 const { parseCards, cardToPretty, cardToStr, cardsToStr, NOTATION_TO_COMBOS, comboToPretty, COMBO_COUNT, makeRng, remainingDeck } = __squidRequire('src/core/cards.js');
 const { parseRange, rangeToText, rangeByNotation, rangeComboCount, PRESETS } = __squidRequire('src/core/range.js');
 const { RemoteSolverAdapter, VILLAIN_MODELS } = __squidRequire('src/solver/squid.js');
-const { STREET_NAMES, DEFAULT_SIZES } = __squidRequire('src/solver/tree.js');
+const { STREET_NAMES, DEFAULT_SIZES, describeHistory } = __squidRequire('src/solver/tree.js');
+
+// 解算引擎在页面上的叫法（内部记号 vector / sampled 不给玩家看）
+const ENGINE_CN = { vector: '向量 DCFR', sampled: '采样 MCCFR' };
+const engineName = (e) => ENGINE_CN[e] || e;
 const { cardsEl } = __squidRequire('src/ui/cards.js');
 const { h, $, pct, f1, f2, toast, actionColors, renderGrid, legendEl } = __squidRequire('src/ui/dom.js');
 const { refreshView } = __squidRequire('src/ui/router.js');
@@ -112,7 +116,7 @@ function buildSolverView() {
         sol = await new RemoteSolverAdapter(solverState.cloudUrl).solve({ ...spec, ranges: spec.ranges }, { ms: cfg.seconds * 1000, targetExploitPct: cfg.target });
       } else {
         sol = await client.solve(spec, { ms: cfg.seconds * 1000, targetExploitPct: cfg.target }, (m) => {
-          if (m.type === 'tree') status.textContent = `树已建：${m.nodes} 节点 / ${m.decisionNodes} 决策节点，引擎 ${m.engine}`
+          if (m.type === 'tree') status.textContent = `树已建：${m.nodes} 节点 / ${m.decisionNodes} 决策节点，引擎 ${engineName(m.engine)}`
             + (m.memory ? `，预计占用 ${m.memory.totalMB.toFixed(0)} MB（策略表 ${m.memory.strategyMB.toFixed(0)} + 权益矩阵 ${m.memory.equityMB.toFixed(0)}）` : '');
           else if (m.phase === 'precompute') { status.textContent = `预计算牌力表/权益矩阵 ${m.done}/${m.total}`; prog.firstChild.style.width = `${(m.done / m.total) * 30}%`; }
           else if (m.phase === 'solve') { const frac = Math.min(1, m.elapsed / (cfg.seconds * 1000)); prog.firstChild.style.width = `${30 + frac * 70}%`; status.textContent = `迭代 ${m.iter}，${(m.elapsed / 1000).toFixed(1)}s` + (m.exploit ? `，可利用度 ${m.exploit.pctPot.toFixed(2)}% 底池` : ''); }
@@ -122,7 +126,7 @@ function buildSolverView() {
       solverState.node = sol.root;
       prog.firstChild.style.width = '100%';
       const s = sol.summary;
-      status.textContent = `完成：${s.engine}，${s.iterations} 次迭代，${(s.elapsedMs / 1000).toFixed(1)}s，${s.nodes} 节点` + (s.exploitPct != null ? `，可利用度 ${s.exploitPct.toFixed(2)}% 底池` : '') + (s.rootEV ? `，根节点 EV ${s.rootEV.map((x) => f2(x)).join(' / ')}` : '');
+      status.textContent = `完成：${engineName(s.engine)}，${s.iterations} 次迭代，${(s.elapsedMs / 1000).toFixed(1)}s，${s.nodes} 节点` + (s.exploitPct != null ? `，可利用度 ${s.exploitPct.toFixed(2)}% 底池` : '') + (s.rootEV ? `，根节点 EV ${s.rootEV.map((x) => f2(x)).join(' / ')}` : '');
       renderSolution();
     } catch (e) { status.textContent = '失败：' + e.message; }
     solveBtn.disabled = false;
@@ -232,7 +236,8 @@ function buildSolverView() {
       for (const d of r.diffs.slice(0, 8)) {
         const changed = d.actions.filter((a) => Math.abs(a.exploit - a.gto) > 3);
         dt.append(h('tr', {},
-          h('td', { class: 'mono small' }, d.history || '（根节点）'),
+          // 动作序列写成中文（过牌 → 下注75% → 跟注 → 发牌 Ks），不直接摆 X-B75-C-Ks- 这种内部记号
+          h('td', { class: 'small' }, d.history ? describeHistory(d.history).join(' → ') : '（根节点）'),
           h('td', { class: 'mono' }, f1(d.pot)),
           h('td', { class: 'mono' }, d.reachPct.toFixed(1) + '%'),
           h('td', { class: 'mono' }, d.movedPct.toFixed(0) + '%'),

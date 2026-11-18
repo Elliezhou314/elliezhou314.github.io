@@ -227,7 +227,7 @@ async function startDrill(sc, levelCtx = null) {
         !Number.isFinite(run.avgLossPct) ? '　这一关没有任何可判分的决策，所以给不出星级——多半是解算没跑够或范围冲突，建议重新解算再打。'
           : run.stars < 3 ? `　离三星还差 ${(run.avgLossPct - STAR_GATES[0].pct).toFixed(2)} 个百分点。` : '　已经是三星。',
         rec.stars > run.stars ? `（历史最好成绩是 ${rec.stars} 星，本次 ${run.stars} 星；显示的是历史最好）` : ''),
-      run.noisy ? h('div', { class: 'small muted' }, `其中 ${run.noisy} 个决策的差距落在噪声内（3 人局的 EV 是估计值，或者差距比解自己的可利用度还小）。这些决策照常计入星级——noisy 只说明差距不显著，实测损失本身仍是无偏估计。`) : null,
+      run.noisy ? h('div', { class: 'small muted' }, `其中 ${run.noisy} 个决策的差距落在噪声内（3 人局的 EV 是估计值，或者差距比解自己的可利用度还小）。这些决策照常计入星级——「落在噪声内」只说明差距在统计上看不出来，算出的损失本身并不偏高也不偏低。`) : null,
       // 给一条可执行的下一步，别只丢一个分数
       h('div', { class: 'note' }, nextStepAdvice(run)),
       h('div', { class: 'actions' },

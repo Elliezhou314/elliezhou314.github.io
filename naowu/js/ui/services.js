@@ -86,6 +86,7 @@ class SolverClient {
   exploit(solveId, hero, model) { return this._send({ type: 'exploit', solveId, hero, model }); }
   async loadSolution(spec, dims, strategies, meta, onProgress) { const m = await this._send({ type: 'loadSolution', spec, dims, strategies, meta }, onProgress); return new Solution(m.data); }
   puzzle(puzzleId) { return this._send({ type: 'puzzle', puzzleId }); }
+  variant(variantType, seed) { return this._send({ type: 'variant', variantType, seed }); }
   equity(params) { return this._send({ type: 'equity', ...params }); }
   preflop(params, onProgress) { return this._send({ type: 'preflop', ...params }, onProgress); }
 }

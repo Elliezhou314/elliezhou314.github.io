@@ -30,6 +30,7 @@ function summaryText(s) {
     `自由牌局 ${s.hands} 手`,
     `数学竞赛 ${s.puzzles} 道题的作答（解出 ${s.puzzlesSolved} 道）`,
     `限时速算最好 ${s.speedBest} 题（挑战 ${s.speedRuns} 局）`,
+    `变式练习 ${s.variantsDone} 道（第一次就答对 ${s.variantsFirst} 道）`,
     `闯关 ${s.levels} 关有成绩`,
   ];
   if (s.scenarios) parts.push(`自定义场景 ${s.scenarios} 个`);
@@ -54,7 +55,7 @@ function showPreview(stage, text, source) {
   }
   const s = res.summary;
   const box = h('div', { class: 'xfpreview', 'data-state': 'preview', 'data-attempts': String(s.attempts), 'data-hands': String(s.hands),
-    'data-puzzles': String(s.puzzles), 'data-speed-best': String(s.speedBest), 'data-levels': String(s.levels) },
+    'data-puzzles': String(s.puzzles), 'data-speed-best': String(s.speedBest), 'data-levels': String(s.levels), 'data-variants': String(s.variantsDone) },
   h('div', {}, h('b', {}, `${source}里有：`), summaryText(s), '。'),
   h('div', { class: 'small muted' }, '本机现在的进度：', summaryText(summarizeProgress(store.data)), '。'),
   h('div', { class: 'note' }, '确认后，本机现在的进度会被这一份整个替换，不能撤销。想先留一份底，就先点上面的「复制进度」或「导出进度」。'),
@@ -98,7 +99,7 @@ function resetBox() {
   const box = h('div', { class: 'row xfreset' });
   const idle = () => setKids(box, h('button', { class: 'danger', 'data-act': 'reset', onclick: ask }, '清空记录'));
   const ask = () => setKids(box,
-    h('span', { class: 'small', 'data-state': 'ask' }, '确定清空全部进度？训练记录、牌局、答题、闯关星级、速算成绩都会清掉，不能撤销。'),
+    h('span', { class: 'small', 'data-state': 'ask' }, '确定清空全部进度？训练记录、牌局、答题、闯关星级、速算成绩、变式练习记录都会清掉，不能撤销。'),
     h('button', { class: 'danger', 'data-act': 'reset-confirm', onclick: () => { store.reset(); applySettings(); refreshView('review'); refreshView('drill'); refreshView('campaign'); refreshView('contest'); } }, '确认清空'),
     h('button', { 'data-act': 'reset-cancel', onclick: idle }, '取消'));
   idle();

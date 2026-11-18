@@ -7,6 +7,7 @@ __squidDefine('src/train/training.js', function (exports) {
 const { COMBOS, COMBO_COUNT, NOTATION_TO_COMBOS, comboToNotation, comboToPretty, cardToStr, parseCards, makeRng, cardsToPretty } = __squidRequire('src/core/cards.js');
 const { sampleCombo, removeDead, parseRange } = __squidRequire('src/core/range.js');
 const { emptySpeedRecord, coerceSpeedRecord } = __squidRequire('src/train/speed.js');
+const { emptyVariantRecord, coerceVariantRecord, variantTotals } = __squidRequire('src/train/variants/record.js');
 
 // ---------------------------------------------------------------------------
 // 预置场景（范围是示例起点，都可以在界面里改；筹码单位 = 大盲）
@@ -60,6 +61,7 @@ const emptyProgress = () => ({
   season: { score: 0, bestCombo: 0, labRuns: 0, daily: {}, dailyStreak: 0, lastDaily: null, seen: {} },
   settings: { sfx: false },   // 界面设置：音效开关（默认关）
   speed: emptySpeedRecord(),  // 限时速算：{ best 最好成绩（答对数）, runs 60 秒挑战的局数, byType 各题型累计对错, history 逐局历史（v0.11 起，最多 200 局） }
+  variants: emptyVariantRecord(),  // 数学竞赛的变式练习（v0.13）：{ byType: { P01: { done 做了几道, firstTry 其中第一次就答对的 }, … } }
 });
 
 /**
@@ -138,6 +140,8 @@ function coerceProgress(raw) {
   // 限时速算的记录（v0.10 加的字段）：逐项只认非负整数、不认识的题型丢掉，校验规则在 speed.js 的 coerceSpeedRecord。
   // 旧存档没有这个字段时就是空记录（最好成绩 0、局数 0、各题型 0 对 0 错）。
   d.speed = coerceSpeedRecord(raw.speed);
+  // 变式练习的记录（v0.13 加的字段）：只认非负整数、第一次就答对的不超过做了的、不认识的题型丢掉，规则在 variants/record.js。旧存档没有这个字段时给空记录。
+  d.variants = coerceVariantRecord(raw.variants);
   if (raw.puzzles && typeof raw.puzzles === 'object' && !Array.isArray(raw.puzzles)) {
     for (const [k, v] of Object.entries(raw.puzzles)) {
       if (!v || typeof v !== 'object' || Array.isArray(v)) continue;
@@ -174,9 +178,11 @@ function summarizeProgress(d) {
     srs: Object.keys(d.srs || {}).length,
     speedBest: d.speed ? d.speed.best : 0,
     speedRuns: d.speed ? d.speed.runs : 0,
+    variantsDone: variantTotals(d.variants).done,
+    variantsFirst: variantTotals(d.variants).firstTry,
     seasonScore: season.score || 0,
   };
-  out.empty = !out.attempts && !out.srs && !out.hands && !out.scenarios && !out.puzzles && !out.levels && !hasSeason && !out.speedRuns;
+  out.empty = !out.attempts && !out.srs && !out.hands && !out.scenarios && !out.puzzles && !out.levels && !hasSeason && !out.speedRuns && !out.variantsDone;
   return out;
 }
 

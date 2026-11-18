@@ -7,8 +7,9 @@ const { mistakeBook, puzzleMisses, puzzleTotals, speedWeakTypes, SPEED_SMALL_N }
 const { dayKey } = __squidRequire('src/train/season.js');
 const { pctText } = __squidRequire('src/train/speed.js');
 const { scenarioToSpec } = __squidRequire('src/train/training.js');
+const { variantRows } = __squidRequire('src/train/variants/record.js');
 const { cardsEl } = __squidRequire('src/ui/cards.js');
-const { h, toast } = __squidRequire('src/ui/dom.js');
+const { appendTo, h, toast } = __squidRequire('src/ui/dom.js');
 const { allScenarios } = __squidRequire('src/ui/progress.js');
 const { startScenario, switchView } = __squidRequire('src/ui/router.js');
 const { store } = __squidRequire('src/ui/services.js');
@@ -89,6 +90,14 @@ function drillPanel() {
 // ---------------------------------------------------------------------------
 // 数学竞赛里没一次做对的题
 // ---------------------------------------------------------------------------
+/** 变式练习各题型「第一次就答对」的比例，一行字；一道都没做过就不写（行由 train/variants/record.js 现数） */
+function variantLine() {
+  const rows = variantRows(store.data.variants);
+  if (!rows.length) return null;
+  return h('div', { class: 'small muted rvvx', 'data-types': String(rows.length) }, '变式练习（不计星级）第一次就答对：',
+    rows.map((r) => `${r.name} ${r.firstTry}/${r.done}（${pctText(r.rate)}）`).join('；'), '。');
+}
+
 function puzzlePanel() {
   const recs = store.data.puzzles || {};
   const rows = puzzleMisses(recs);
@@ -98,6 +107,7 @@ function puzzlePanel() {
     panel.append(empty(tot.touched
       ? `还没有。你答过的 ${tot.touched} 道题都是没看提示、第一次就答对的。`
       : '还没有。到「数学竞赛」做几道题：答了不止一次的、看过提示的、答过还没解出来的，都会列在这里。'));
+    appendTo(panel, variantLine());
     return panel;
   }
   panel.append(h('div', { class: 'note' }, '「没一次做对」= 不是没看提示、第一次就答对：答了不止一次的、看过提示的、答过还没解出来的。星级照竞赛的规则（看过提示或答了多次 1 星）。重置一道题请到题目页里自己点。'));
@@ -109,6 +119,7 @@ function puzzlePanel() {
       h('td', {}, h('button', { class: 'small', 'data-act': 'puzzle', onclick: () => { contestState.open = r.id; contestState.fromCampaign = false; switchView('contest'); } }, '去做这道题'))));
   }
   panel.append(h('div', { class: 'scroll-x' }, tbl));
+  appendTo(panel, variantLine());
   return panel;
 }
 

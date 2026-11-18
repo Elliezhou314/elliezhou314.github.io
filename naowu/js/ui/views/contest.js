@@ -10,19 +10,12 @@ const { puzzleRecord, savePuzzle, starsForNow, starsFor, contestTotals, markDail
 const { switchView } = __squidRequire('src/ui/router.js');
 const { client, store } = __squidRequire('src/ui/services.js');
 const { sfx } = __squidRequire('src/ui/sfx.js');
+const { variantPanel } = __squidRequire('src/ui/contest/variant.js');
+const { VERIFY_LABEL, wrongDirection } = __squidRequire('src/ui/contest/verify.js');
 const { solverState } = __squidRequire('src/ui/views/solver.js');
 
-const contestState = { tier: null, open: null, computed: new Map(), fromCampaign: false };
-
-// 每道题的两条路径有多独立，如实标出来——有几道题的两侧本质是同一套计数逻辑，
-// 能抓笔误但抓不住概念错误，不该和「解算器现跑」混为一谈。
-const VERIFY_LABEL = {
-  solver: '最强：除了公式，还让解算器不带任何公式、从零自己打这个局面，打出来的频率和公式一致（换三种下注大小都一致）',
-  cfr: '强：答案就是让电脑自己跟自己对打几万轮学出来的，再和教科书上的公式对照',
-  numeric: '强：不套公式，把每一步都模拟出来，再反复试出正好满足条件的数，然后和公式对照',
-  enumeration: '强：一边把所有可能一个不漏地数一遍，一边用排列组合公式算，两种方法互不依赖',
-  counting: '中：两边用的都是「数组合」的思路，只是各写了一遍——能发现算错，发现不了想错',
-};
+// variant 为真时页面显示「变式练习」，不显示 12 道固定题的列表
+const contestState = { tier: null, open: null, computed: new Map(), fromCampaign: false, variant: false };
 
 // 主线程只算轻的题；重的（要枚举几百万手牌）交给 Worker，
 // 否则手机上会把页面卡住好几秒（P01 实测 6 倍降频下阻塞约 5 秒）。
@@ -68,12 +61,16 @@ function buildContestView() {
   ));
 
   const tiers = h('div', { class: 'tiers' });
-  tiers.append(h('button', { class: contestState.tier ? '' : 'on', onclick: () => { contestState.tier = null; buildContestView(); } }, '全部'));
+  const listOn = (tier) => !contestState.variant && contestState.tier === tier;
+  tiers.append(h('button', { class: listOn(null) ? 'on' : '', onclick: () => { contestState.tier = null; contestState.variant = false; buildContestView(); } }, '全部'));
   for (const tier of TIERS) {
     const n = PUZZLES.filter((p) => p.tier === tier).length;
-    tiers.append(h('button', { class: contestState.tier === tier ? 'on' : '', onclick: () => { contestState.tier = tier; buildContestView(); } }, tier + ' (' + n + ')'));
+    tiers.append(h('button', { class: listOn(tier) ? 'on' : '', onclick: () => { contestState.tier = tier; contestState.variant = false; buildContestView(); } }, tier + ' (' + n + ')'));
   }
+  // 变式练习：和三档题目列表并列的一个签，点进去出同类型、换了数字和牌的新题
+  tiers.append(h('button', { class: 'vxtab' + (contestState.variant ? ' on' : ''), 'data-act': 'variant', onclick: () => { contestState.variant = true; buildContestView(); } }, '变式练习'));
   v.append(tiers);
+  if (contestState.variant) { v.append(variantPanel()); return; }
 
   const list = h('div', { class: 'plist' });
   for (const p of PUZZLES) {
@@ -192,18 +189,11 @@ function renderPuzzle(v, id) {
       revealAll();
     } else {
       const hintLeft = p.hints.length - (rec.usedHints || 0);
-      const ratio = Number.isFinite(r.parsed) && Number.isFinite(computed.value) && computed.value !== 0 ? r.parsed / computed.value : null;
+      const dir = wrongDirection(r.parsed, computed.value);
       result.append(h('div', { class: 'verdict wrong' },
         h('b', {}, '✗ 不对'), '　' + r.reason + '。',
         // 不直接给答案，但给一个方向：往哪边偏、是不是差了个常见倍数
-        ratio != null ? h('div', { class: 'small', style: { marginTop: '4px' } },
-          Math.abs(ratio - 1) < 0.05 ? '已经很接近了——检查一下保留一位小数时是不是四舍五入错了。'
-            : Math.abs(ratio - 2) < 0.02 ? '正好差 2 倍：是不是同一种情况被你数了两次？比如「先拿 A 再拿 K」和「先拿 K 再拿 A」其实是同一手牌。'
-              : Math.abs(ratio - 0.5) < 0.01 ? '正好差一半：是不是漏掉了一半的情况？比如只数了「先 A 后 K」，没数「先 K 后 A」。'
-                : Math.abs(ratio - 100) < 1 || Math.abs(ratio - 0.01) < 0.0001 ? '差了 100 倍 —— 百分数和小数弄反了。'
-                  : ratio < 0 ? '正负号反了。'
-                    : ratio < 0.1 ? '还不到标准答案的十分之一，偏小了' + (computed.value < 0 ? '（按绝对值说）。' : '。')
-                      : '你的答案是标准答案的 ' + ratio.toFixed(1) + ' 倍，' + (ratio > 1 ? '偏大了' : '偏小了') + (computed.value < 0 ? '（按绝对值说）。' : '。')) : null,
+        dir ? h('div', { class: 'small', style: { marginTop: '4px' } }, dir) : null,
         h('div', { class: 'small muted', style: { marginTop: '4px' } },
           '已作答 ' + rec.attempts + ' 次。' + (hintLeft > 0 ? `还有 ${hintLeft} 条提示没用。` : '提示已用完。')),
         h('div', { class: 'row', style: { marginTop: '6px' } },

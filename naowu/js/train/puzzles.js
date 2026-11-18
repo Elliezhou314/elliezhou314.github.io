@@ -180,7 +180,7 @@ function checkAnswer(puzzle, input, computed) {
 // ---------------------------------------------------------------------------
 const C = (n, k) => { if (k < 0 || k > n) return 0; let r = 1; for (let i = 0; i < k; i++) r = (r * (n - i)) / (i + 1); return Math.round(r); };
 
-/** 枚举全部 C(52,5) 手牌，按类别计数（用于省赛计数题） */
+/** 枚举全部 C(52,5) 手牌，按类别计数（用于省赛计数题；变式练习的「五张牌的牌型」也用它，见 train/variants/counting.js） */
 let fiveCardCounts = null;
 function categoryCounts5() {
   if (fiveCardCounts) return fiveCardCounts;
@@ -689,6 +689,7 @@ exports.parseAnswer = parseAnswer;
 exports.oneDecimal = oneDecimal;
 exports.formatAnswer = formatAnswer;
 exports.checkAnswer = checkAnswer;
+exports.categoryCounts5 = categoryCounts5;
 exports.puzzlesByTier = puzzlesByTier;
 exports.getPuzzle = getPuzzle;
 exports.PUZZLES = PUZZLES;
