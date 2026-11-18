@@ -1,0 +1,10 @@
+/* 脑雾克星 · 网页应用专用的样式（安装提示、新版本提示）。只在 dist/pwa/ 里有，颜色沿用 style.css 的变量。 */
+.pwatip{display:flex;align-items:center;gap:10px;margin:8px auto 0;max-width:1500px;padding:10px calc(12px + env(safe-area-inset-right,0px)) 10px calc(12px + env(safe-area-inset-left,0px));
+  background:rgba(245,182,66,.1);border:1px solid rgba(245,182,66,.5);border-left:0;border-right:0;font-size:14px;line-height:1.6}
+.pwatiptext{flex:1;min-width:0}
+.pwatipclose{flex:none;width:40px;height:40px;padding:0;border-radius:50%;font-size:22px;line-height:1;background:none;color:var(--muted)}
+/* 新版本提示：贴在屏幕下方、底栏上沿之上，不挡操作区中间；点了才更新 */
+.pwaupdate{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;max-width:calc(100vw - 32px);
+  padding:10px 18px;border-radius:99px;background:var(--accent);color:#1a1200;border:0;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.5);white-space:nowrap}
+.pwaupdate:disabled{opacity:.8}
+@media (max-width:700px){.pwaupdate{bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px) + 10px)}}
