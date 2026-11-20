@@ -52,7 +52,7 @@
 <script>
 window.addEventListener('load', function () {
   setTimeout(function () {
-    if (window.__SQUID_READY__) return;
+    if (window.__SQUID_READY__ || window.__SQUID_BOOTED__) return;
     var m = document.querySelector('main');
     if (!m) return;
     m.innerHTML = '<div style="max-width:640px;margin:40px auto;padding:16px 20px;border:1px solid #f5b642;border-radius:10px;background:#161d23;color:#e6edf3;line-height:1.9">'
@@ -72,6 +72,10 @@ window.addEventListener('load', function () {
 <script src="js/core/range.js"></script>
 <script src="js/engine/bot.js"></script>
 <script src="js/engine/game.js"></script>
+<script src="js/license/code.js"></script>
+<script src="js/license/device.js"></script>
+<script src="js/license/pubkey.js"></script>
+<script src="js/license/verify.js"></script>
 <script src="js/review/hindsight.js"></script>
 <script src="js/review/replay.js"></script>
 <script src="js/review/review.js"></script>
@@ -96,6 +100,8 @@ window.addEventListener('load', function () {
 <script src="js/train/variants/showdown.js"></script>
 <script src="js/train/variants/types.js"></script>
 <script src="js/ui/app.js"></script>
+<script src="js/ui/betspot.js"></script>
+<script src="js/ui/boot.js"></script>
 <script src="js/ui/bubble.js"></script>
 <script src="js/ui/cards.js"></script>
 <script src="js/ui/chart.js"></script>
@@ -104,8 +110,10 @@ window.addEventListener('load', function () {
 <script src="js/ui/contest/verify.js"></script>
 <script src="js/ui/data.js"></script>
 <script src="js/ui/dom.js"></script>
+<script src="js/ui/feltrect.js"></script>
 <script src="js/ui/fx.js"></script>
 <script src="js/ui/leaveguard.js"></script>
+<script src="js/ui/lock.js"></script>
 <script src="js/ui/mobilenav.js"></script>
 <script src="js/ui/progress.js"></script>
 <script src="js/ui/replay/equitypanel.js"></script>

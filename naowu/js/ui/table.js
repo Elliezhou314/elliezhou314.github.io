@@ -18,13 +18,16 @@ __squidDefine('src/ui/table.js', function (exports) {
 // 尺寸：用 ResizeObserver 量牌桌宽度，把牌宽等写成像素 CSS 变量，窄于 NARROW 像素时加 narrow 类。
 // 不用容器查询和 cqw（旧安卓内核不认），也不用独立的 translate/rotate/scale 属性：
 // 居中定位的 transform 写在外层元素上，动画只动内层，互不覆盖。
+const { placeBets } = __squidRequire('src/ui/betspot.js');
 const { placeBubble } = __squidRequire('src/ui/bubble.js');
 const { cardEl, setCardFace } = __squidRequire('src/ui/cards.js');
 const { f1 } = __squidRequire('src/ui/dom.js');
+const { centerIn, holeRect, rectOf } = __squidRequire('src/ui/feltrect.js');
 const { sfx } = __squidRequire('src/ui/sfx.js');
 
 const NARROW = 560;      // 牌桌宽度低于这个像素就换竖椭圆布局、收起位置名
 const EDGE = 4;          // 座位、筹码离毡面边缘至少留这么多像素
+const LONGEST = 599.5;   // 起始后手 100、6 人桌全桌 600：下注、底池、后手最长显示成「599.5」
 
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -40,12 +43,6 @@ function chipsHtml(v) {
   return '<span class="chips">' + out.join('') + '</span>';
 }
 
-/** 元素中心相对毡面左上角的坐标 */
-function centerIn(e, felt) {
-  const r = e.getBoundingClientRect(), f = felt.getBoundingClientRect();
-  return { x: r.left + r.width / 2 - f.left, y: r.top + r.height / 2 - f.top };
-}
-
 function createTable(root) {
   root.classList.add('ptable');
   root.innerHTML = '';
@@ -55,7 +52,10 @@ function createTable(root) {
   const boardEl = el('div', 'board');
   const potEl = el('div', 'pot', '<span class="pot-in"><span class="chips"></span><span class="lbl">底池</span><b>0</b></span>');
   const dbtn = el('div', 'dbtn', '<span>D</span>');
-  felt.append(mark, boardEl, potEl, dbtn);
+  // 量尺：看不见的三块样板，按实际会出现的最长一档（599.5）量下注标签、底池标签、后手数字有多大，给下注找位置用
+  const probe = el('div', 'probe', `<span class="pbet"><span class="bet-in">${chipsHtml(LONGEST)}<b>${f1(LONGEST)}</b></span></span>`
+    + `<span class="ppot"><span class="pot-in">${chipsHtml(LONGEST)}<span class="lbl">本手底池</span><b>${f1(LONGEST)}</b></span></span><span class="stk">${f1(LONGEST)}</span>`);
+  felt.append(mark, boardEl, potEl, dbtn, probe);
   for (let i = 0; i < 5; i++) boardEl.append(el('span', 'slot'));
   potEl.style.visibility = 'hidden';
   dbtn.hidden = true;
@@ -169,6 +169,9 @@ function createTable(root) {
     root.style.setProperty('--cwo', px(clamp(W * (narrow ? 0.056 : 0.046), 18, 42)));
     root.style.setProperty('--cwh', px(clamp(W * (narrow ? 0.1 : 0.07), 26, 62)));
     felt.style.fontSize = px(clamp(W * 0.015, 11, 14));
+    // 后手数字的格子按最长一档「599.5」留宽（--stkw，量尺是 probe 里的样板）：名牌宽度不随后手数字变，座位和下注的位置也就不随后手变。
+    // v0.14.3 用「名牌宽减后手宽再加最长一档」去估，两个宽度的小数部分随数字变，找空位时会跳到另一处——一手牌里下注标签跟着后手跳（v0.14.4 修）
+    root.style.setProperty('--stkw', probe.children[2].getBoundingClientRect().width + 'px');
 
     const place = (e, x, y) => {
       const w = e.offsetWidth, h = e.offsetHeight;
@@ -187,54 +190,57 @@ function createTable(root) {
     // 座位：自己在正下方；其余按座位号顺时针等分椭圆（屏幕坐标 y 朝下，角度增大即顺时针）
     const ang = (i) => ((90 + ((i - hero + n) % n) * 360 / n) * Math.PI) / 180;
     const rx = W * (narrow ? 0.36 : 0.4), ry = H * (narrow ? 0.4 : 0.37);
-    // 下注点在座位和桌心之间（偏后一点，免得压住庄家按钮）；庄家按钮在座位另一侧
     const bx = W * (narrow ? 0.25 : 0.27), by = H * (narrow ? 0.24 : 0.25);
     T.seats.forEach((s, i) => {
       const a = ang(i);
       if (i === hero) place(s.el, cx, H - s.el.offsetHeight / 2 - EDGE);
       else place(s.el, cx + rx * Math.cos(a), cy + ry * Math.sin(a));
-      const ab = a + (22 * Math.PI) / 180;
-      s.betAt = { x: cx + bx * Math.cos(ab), y: cy + by * Math.sin(ab) };
-      place(s.bet, s.betAt.x, s.betAt.y);
     });
+    // 庄家按钮在座位朝桌心那一侧、偏前一点
     if (last.button >= 0 && last.button < n) {
       const a = ang(last.button) - (24 * Math.PI) / 180;
       place(dbtn, cx + bx * 1.05 * Math.cos(a), cy + by * 1.1 * Math.sin(a));
       dbtn.hidden = false;
     } else dbtn.hidden = true;
+    // 下注：先照原来的算法得到想摆的点（座位和桌心之间、偏后一点），再交给 betspot.js 让开名牌、手牌、公共牌五张的位置、底池、庄家按钮
+    // 和别家的下注（标签、底池、后手都按最长一档「599.5」量，量尺是 probe 里那几块看不见的样板）。没问题的座位原样不动
+    const f = felt.getBoundingClientRect();
+    const [pb, pp] = probe.children;
+    const pc = centerIn(potEl, felt);
+    const hard = [rectOf(boardEl, f), { l: pc.x - pp.offsetWidth / 2, t: pc.y - pp.offsetHeight / 2, r: pc.x + pp.offsetWidth / 2, b: pc.y + pp.offsetHeight / 2 }];
+    if (!dbtn.hidden) hard.push(rectOf(dbtn, f));
+    const seatsC = T.seats.map((s) => {
+      hard.push(rectOf(s.plate, f), holeRect(s.hole, f));   // 名牌的后手格子已经按最长一档留宽（--stkw），不用再估
+      return centerIn(s.el, felt);
+    });
+    const want = T.seats.map((s, i) => { const ab = ang(i) + (22 * Math.PI) / 180; return { x: cx + bx * Math.cos(ab), y: cy + by * Math.sin(ab) }; });
+    const spots = placeBets({ W, H, R: parseFloat(felt.style.borderRadius) || 0, edge: EDGE, cx, cy, box: { w: pb.offsetWidth, h: pb.offsetHeight }, want, seats: seatsC, hard });
+    T.seats.forEach((s, i) => {
+      s.betAt = { x: Math.round(spots[i].x), y: Math.round(spots[i].y) };
+      s.betBox = spots[i].box;
+      s.bet.style.left = s.betAt.x + 'px'; s.bet.style.top = s.betAt.y + 'px';
+    });
     // 牌桌大小变了（转屏、拉窗口）：亮着的气泡跟着重新找位置。大小没变就不动它，免得气泡亮着的时候跳一下
     // 收着的气泡（透明）也挪回左上角：它们还停在旧尺寸下的位置的话，牌桌变窄后会伸出页面右边、让手机上整页能横向滚动
     if (resized) T.seats.forEach((s, i) => { if (s.say.classList.contains('on')) placeSay(i); else { s.say.style.left = '0px'; s.say.style.top = '0px'; } });
   }
 
-  /** 元素相对毡面左上角的矩形 */
-  function rectOf(e, f) {
-    const r = e.getBoundingClientRect();
-    return { l: r.left - f.left, t: r.top - f.top, r: r.right - f.left, b: r.bottom - f.top };
-  }
-  /** 手牌那一块：手牌容器和里面每张牌（自己的两张是斜着放的，会探出容器一点）合起来 */
-  function holeRect(s, f) {
-    let u = rectOf(s.hole, f);
-    for (const c of s.hole.children) { const r = rectOf(c, f); u = { l: Math.min(u.l, r.l), t: Math.min(u.t, r.t), r: Math.max(u.r, r.r), b: Math.max(u.b, r.b) }; }
-    return u;
-  }
   /** 给座位 i 的气泡找位置（见 bubble.js）：不压任何人的名牌、手牌，不压公共牌、底池、下注 */
   function placeSay(i) {
     const s = T.seats[i];
     if (!s || !felt.clientWidth) return;
     const f = felt.getBoundingClientRect();
     const W = felt.clientWidth, H = felt.clientHeight;
-    const fs = parseFloat(felt.style.fontSize) || 13;
     const hard = [rectOf(boardEl, f), rectOf(potEl, f)], soft = [];
     T.seats.forEach((o, k) => {
-      hard.push(rectOf(o.plate, f), holeRect(o, f));
+      hard.push(rectOf(o.plate, f), holeRect(o.hole, f));
       if (!o.bet.hidden) hard.push(rectOf(o.bet, f));
-      else if (o.betAt) soft.push({ l: o.betAt.x - 2.7 * fs, t: o.betAt.y - 0.75 * fs, r: o.betAt.x + 2.7 * fs, b: o.betAt.y + 0.75 * fs });   // 还没下注的人：以后下注会出现在这儿
+      else if (o.betBox) soft.push(o.betBox);   // 还没下注的人：以后下注会出现在这儿（按最长一档算的大小）
       if (k !== i && o.say.classList.contains('on')) soft.push(rectOf(o.say, f));
     });
     if (!dbtn.hidden) soft.push(rectOf(dbtn, f));
     const p = placeBubble({ w: s.say.offsetWidth, h: s.say.offsetHeight, W, H, R: parseFloat(felt.style.borderRadius) || 0, edge: EDGE,
-      plate: rectOf(s.plate, f), hole: holeRect(s, f), cx: W / 2, hard, soft });
+      plate: rectOf(s.plate, f), hole: holeRect(s.hole, f), cx: W / 2, hard, soft });
     s.say.style.left = Math.round(p.x) + 'px';
     s.say.style.top = Math.round(p.y) + 'px';
     s.say.dataset.fit = String(p.level);
@@ -280,6 +286,12 @@ function createTable(root) {
     window.__squidTableTest = {
       say: (seat, text) => say({ say: { seat, text } }, true),
       hide: () => { for (const s of T.seats) { clearTimeout(s.sayTimer); s.say.classList.remove('on'); } },
+      // tools/uicheck_bets.mjs：把此刻的画面换个庄位、换一组下注直接画出来（只是摆样子，不碰牌局）；unstage() 画回原样
+      stage: (o) => { const v = T.staged || T.last; if (!v) return false; T.staged = v;
+        show({ ...v, say: null, acting: -1, button: o.button >= 0 ? o.button : v.button, pot: o.pot >= 0 ? o.pot : v.pot, done: o.done === undefined ? v.done : o.done,
+          seats: v.seats.map((p, i) => ({ ...p, bet: o.bets ? o.bets[i] || 0 : p.bet, stack: o.stacks ? o.stacks[i] : p.stack })) }, { instant: true }); return true; },
+      unstage: () => { const v = T.staged; T.staged = null; if (v) show(v, { instant: true }); },
+      spots: () => T.seats.map((s) => s.betAt),
     };
   }
 

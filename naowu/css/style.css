@@ -93,10 +93,13 @@ main{padding:14px calc(16px + env(safe-area-inset-right,0px)) 60px calc(16px + e
 .ptable .slot{display:inline-block;width:var(--cw);height:calc(var(--cw)*1.4);border-radius:calc(var(--cw)*.11);border:1px dashed rgba(255,255,255,.16)}
 .ptable .pot-in,.ptable .bet-in{display:flex;align-items:center;white-space:nowrap;font:600 1em/1.4 var(--f-num)}
 .ptable .pot-in{background:rgba(6,14,10,.55);border-radius:99px;padding:.25em .8em .25em .45em}
-.ptable .pot .lbl{margin:0 .35em 0 .5em}
-.ptable .pot b{color:#ffe08a;font-size:1.15em}
+.ptable .pot .lbl,.ptable .ppot .lbl{margin:0 .35em 0 .5em}
+.ptable .pot b,.ptable .ppot b{color:#ffe08a;font-size:1.15em}
 .ptable .pot.done{opacity:.6}
-.ptable .bet b{margin-left:.4em;font-weight:600}
+.ptable .bet b,.ptable .pbet b{margin-left:.4em;font-weight:600}
+/* 量尺（table.js 的 probe）：按最长一档摆出下注标签、底池标签、后手数字的样板，只量大小、不显示 */
+.ptable .probe{position:absolute;left:0;top:0;visibility:hidden;pointer-events:none}
+.ptable .probe>span{position:absolute;left:0;top:0}
 .ptable .seat{display:flex;flex-direction:column;align-items:center}
 .ptable .seat.me{flex-direction:column-reverse}
 .ptable .plate{display:flex;align-items:center;background:rgba(9,13,16,.86);border:1px solid rgba(255,255,255,.12);border-radius:99px;padding:.25em .9em .25em .25em;white-space:nowrap;transition:border-color .2s,box-shadow .2s}
@@ -106,6 +109,7 @@ main{padding:14px calc(16px + env(safe-area-inset-right,0px)) 60px calc(16px + e
 .ptable .who b{font-weight:600}
 .ptable .who i{font-style:normal;font-size:.78em;color:var(--muted);letter-spacing:.06em}
 .ptable .stk{font:600 1.05em/1 var(--f-num);color:#ffe08a;margin-left:.6em}
+.ptable .seat .stk{min-width:var(--stkw,0)}
 .ptable .hole{display:flex;--cw:var(--cwo);min-height:calc(var(--cw)*1.4);margin-top:calc(var(--cw)*.12)}
 .ptable .seat.me .hole{--cw:var(--cwh);margin:0 0 calc(var(--cw)*.1)}
 .ptable .hc{display:inline-block}
@@ -419,3 +423,18 @@ input.betrange{width:200px;height:28px;padding:0;border:0;background:none;accent
 .ptable.still *,.ptable.still *::before,.ptable.still *::after{transition:none!important}
 /* 系统要求减少动态效果：反馈动效与「更多」面板一律不播，直接停在终态 */
 @media (prefers-reduced-motion:reduce){.stars3 svg,.pill,.evbar .fill,.sheet,.spopt,.chart .pt{animation:none!important}}
+/* 锁屏（v0.15，ui/lock.js）：盖住整页，游戏在解锁之前不启动。不用 inset 简写（旧安卓内核不认），四个方向分开写 */
+.lockscr{position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(28px + env(safe-area-inset-bottom,0px))}
+body.locked{overflow:hidden}
+.lockcard{max-width:560px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 18px 14px;line-height:1.75}
+.lockcard h2{font-size:20px;margin:0 0 6px}
+.lockdevlbl{display:block;color:var(--muted);font-size:13px;margin:14px 0 4px}
+.lockdev{font:700 30px/1.25 var(--f-num);letter-spacing:.08em;color:var(--accent);word-break:break-all;-webkit-user-select:all;user-select:all}
+.lockrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0}
+.lockrow button{min-height:44px;padding:8px 18px;font-size:15px}
+.lockcopybox{width:100%;margin-top:6px;font-size:16px}
+.lockinput{font-size:16px;min-height:76px}
+.lockhint{background:rgba(245,182,66,.1);border:1px solid rgba(245,182,66,.45);border-radius:8px;padding:8px 12px;margin:12px 0 0}
+.lockmsg{min-height:1.6em;margin:6px 0;font-weight:600}
+.lockmsg[data-kind=format],.lockmsg[data-kind=device],.lockmsg[data-kind=signature],.lockmsg[data-kind=expired],.lockmsg[data-kind=nocrypto],.lockmsg[data-kind=empty],.lockmsg[data-kind=error]{color:#fca5a5}
+.lockmsg[data-kind=busy]{color:var(--muted)}
