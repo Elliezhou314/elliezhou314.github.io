@@ -1,16 +1,16 @@
 /* 脑雾克星 · 网页应用专用的样式（安装提示、新版本提示）。只在 dist/pwa/ 里有，颜色沿用 style.css 的变量。 */
-.pwatip{display:flex;align-items:center;gap:10px;margin:8px auto 0;max-width:1500px;padding:10px calc(12px + env(safe-area-inset-right,0px)) 10px calc(12px + env(safe-area-inset-left,0px));
+.pwatip{display:flex;align-items:center;gap:10px;margin:8px auto 0;max-width:1500px;padding:10px calc(12px + var(--sar,0px)) 10px calc(12px + var(--sal,0px));
   background:rgba(245,182,66,.1);border:1px solid rgba(245,182,66,.5);border-left:0;border-right:0;font-size:14px;line-height:1.6}
 .pwatiptext{flex:1;min-width:0}
 .pwatipclose{flex:none;width:40px;height:40px;padding:0;border-radius:50%;font-size:22px;line-height:1;background:none;color:var(--muted)}
 /* 新手引导开着时（pwa.js 加 pwatip-over）：提示贴在屏幕顶上、浮在引导的遮罩（z-index 50）之上，不透明底色，不被遮罩压暗；
    遮罩上沿由 pwa.js 让出提示的高度，引导卡片在下面居中，放不下就在遮罩里滚动。引导关掉就回到上面原来的样子 */
-.pwatip.pwatip-over{position:fixed;top:0;left:0;right:0;z-index:51;margin:0;max-width:none;padding-top:calc(10px + env(safe-area-inset-top,0px));
+.pwatip.pwatip-over{position:fixed;top:0;left:0;right:0;z-index:51;margin:0;max-width:none;padding-top:calc(10px + var(--sat,0px));
   background:linear-gradient(rgba(245,182,66,.12),rgba(245,182,66,.12)),var(--panel);box-shadow:0 6px 18px rgba(0,0,0,.45)}
 .tourmask.pwatour-tip{overflow-y:auto}
 .tourmask.pwatour-tip .tourcard{margin:auto}
 /* 新版本提示：贴在屏幕下方、底栏上沿之上，不挡操作区中间；点了才更新 */
-.pwaupdate{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;max-width:calc(100vw - 32px);
+.pwaupdate{position:fixed;left:50%;bottom:calc(16px + var(--sab,0px));transform:translateX(-50%);z-index:40;max-width:calc(100vw - 32px);
   padding:10px 18px;border-radius:99px;background:var(--accent);color:#1a1200;border:0;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.5);white-space:nowrap}
 .pwaupdate:disabled{opacity:.8}
-@media (max-width:700px){.pwaupdate{bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px) + 10px)}}
+@media (max-width:700px){.pwaupdate{bottom:calc(var(--tabh) + var(--sab,0px) + 10px)}}

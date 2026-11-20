@@ -22,9 +22,11 @@ let seq = 0;
 
 /**
  * 在 host 里装一个回放。table 是自由牌局的牌桌组件；onExit 是「回到牌局」；onReview(rec) 去看文字复盘。
+ * chartHost：胜率折线和「看文字复盘」放在哪（v0.16：自由牌局的「记录」一栏，宽屏并排、手机上点开才弹出）；没给就放在回放面板里。
+ * showChart()：打开事后视角时要不要顺手把那一栏弹出来（自由牌局不用：宽屏那一栏本来就看得见，手机上弹出来会把牌桌盖住）。
  * 返回 { destroy }。记录还原不了时只写明原因，不画任何牌局画面。
  */
-function mountReplay({ host, table, rec, onExit, onReview }) {
+function mountReplay({ host, table, rec, onExit, onReview, chartHost = null, showChart = null }) {
   const rep = buildReplay(rec);
   host.innerHTML = '';
   const root = h('div', { class: 'panel replay', 'data-ok': rep.ok ? '1' : '0' });
@@ -53,15 +55,15 @@ function mountReplay({ host, table, rec, onExit, onReview }) {
   revealBox.addEventListener('change', () => setReveal(revealBox.checked));
   const toReview = onReview ? h('button', { onclick: () => onReview(rec) }, '看文字复盘（可从那里用解算器解决策点）') : null;
 
+  // 一屏放下（v0.16）：上面一块文字（第几步、这一步的说明、事后视角的胜率、跟注要的胜率，放不下在块里滚），
+  // 下面两排按钮：上一步 / 自动播放 / 下一步 / 速度，进度条 / 亮牌开关 / 回到牌局。胜率折线和「看文字复盘」在 chartHost 那一栏
   root.append(
-    h('div', { class: 'rphead' }, h('h2', {}, `回放 · 第 ${rec.handNo} 手`), countEl),
-    sayEl, callEl,
+    h('div', { class: 'rptext' }, h('div', { class: 'rphead' }, h('h2', {}, `回放 · 第 ${rec.handNo} 手`), countEl), sayEl, eqEl, callEl),
     h('div', { class: 'rpctl' }, prev, playBtn, next, speedBtn),
-    h('div', { class: 'rpseekrow' }, seek),
-    h('label', { class: 'rptoggle' }, revealBox, h('span', {}, '亮出所有人的牌（事后视角）')),
-    eqEl, chartEl,
-    h('div', { class: 'row rpfoot' }, back, toReview),
+    h('div', { class: 'rpseekrow' }, seek, h('label', { class: 'rptoggle' }, revealBox, h('span', {}, '亮出所有人的牌')), h('span', { class: 'rpfoot' }, back)),
   );
+  const side = chartHost || root;
+  side.append(h('div', { class: 'rpside' }, h('div', { class: 'muted small rpsidehint' }, '勾上「亮出所有人的牌」，这里画出你每一步的胜率（事后视角）。'), chartEl, toReview));
 
   /** 画第 i 步。anim 为真且正好是往前一步时用动画，否则直接到位 */
   function go(i, anim) {
@@ -95,19 +97,21 @@ function mountReplay({ host, table, rec, onExit, onReview }) {
   function renderEquity() {
     eqEl.innerHTML = '';
     if (!st.reveal) return;
-    eqEl.append(h('div', { class: 'note small' }, '这是事后才知道的数：当时你并不知道对手的牌，它用来回看这手牌的走势，不是当时该用的决策依据。'));
+    const note = h('div', { class: 'note small' }, '这是事后才知道的数：当时你并不知道对手的牌，它用来回看这手牌的走势，不是当时该用的决策依据。');
     if (!st.series) {
       const pn = planNote(rep);
-      eqEl.append(h('div', { class: 'muted small rpwait' }, `正在算每一步的胜率：${pn.text}……`));
+      eqEl.append(h('div', { class: 'muted small rpwait' }, `正在算每一步的胜率：${pn.text}……`), note);
       return;
     }
-    eqEl.append(equityLines(rep, st.series[st.cur]));
+    eqEl.append(equityLines(rep, st.series[st.cur]), note);
     for (const g of chartEl.querySelectorAll('.pt')) g.classList.toggle('on', g.dataset.key === String(st.cur));
   }
 
   function setReveal(on) {
     st.reveal = on;
     root.dataset.reveal = on ? '1' : '0';
+    side.dataset.reveal = on ? '1' : '0';
+    if (on && showChart) showChart();
     chartEl.innerHTML = '';
     if (on && !st.series) {
       const pn = planNote(rep);
@@ -160,7 +164,7 @@ function mountReplay({ host, table, rec, onExit, onReview }) {
   go(0, false);
   return {
     rep,
-    destroy() { st.dead = true; pause(); st.gen++; document.removeEventListener('keydown', onKey); },
+    destroy() { st.dead = true; pause(); st.gen++; document.removeEventListener('keydown', onKey); if (chartHost) chartHost.innerHTML = ''; },
   };
 }
 

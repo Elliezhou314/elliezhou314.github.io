@@ -10,6 +10,7 @@ const { registerNavigation } = __squidRequire('src/ui/router.js');
 const { runSelfTest } = __squidRequire('src/ui/selftest.js');
 const { applySettings, soundButton } = __squidRequire('src/ui/settings.js');
 const { installAudioUnlock } = __squidRequire('src/ui/sfx.js');
+const { installViewport, setFitView } = __squidRequire('src/ui/viewport.js');
 const { buildCampaignView, startLevel } = __squidRequire('src/ui/views/campaign.js');
 const { buildContestView } = __squidRequire('src/ui/views/contest.js');
 const { flushSrs, buildDrillView, startDrill } = __squidRequire('src/ui/views/drill.js');
@@ -31,6 +32,7 @@ function startApp() {
     document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
     markMobileNav(name);
     document.querySelectorAll('.view').forEach((s) => s.classList.toggle('active', s.id === 'view-' + name));
+    setFitView(name);   // 自由牌局一屏放下、页面不上下滚（v0.16，viewport.js 量可用高度）
     if (name === 'review') buildReviewView();
     if (name === 'drill') buildDrillView();
     if (name === 'contest') buildContestView();
@@ -55,6 +57,7 @@ function startApp() {
   installAudioUnlock();   // iPhone 上音频要在点按里才能出声
   document.querySelector('header').append(soundButton('hdrsound'));
   mountMobileNav('campaign');
+  installViewport();
   window.__squidSwitchView = switchView; // 给端到端测试截图用
 
   buildCampaignView();

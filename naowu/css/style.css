@@ -1,6 +1,8 @@
 /* 脑雾克星的全部样式。
    开发版 index.html 直接引用这个文件；node tools/build.mjs 打包时复制成 dist/脑雾克星/css/style.css。 */
-:root{--bg:#0f1418;--panel:#161d23;--panel2:#1c252d;--line:#2a3640;--text:#e6edf3;--muted:#8b9aa8;--accent:#f5b642;--red:#ef4444;--green:#22c55e;--blue:#3b82f6;--purple:#8b5cf6;--f-num:"Bahnschrift","DIN Alternate","Roboto Condensed","Segoe UI","PingFang SC",sans-serif;--tabh:58px}
+:root{--bg:#0f1418;--panel:#161d23;--panel2:#1c252d;--line:#2a3640;--text:#e6edf3;--muted:#8b9aa8;--accent:#f5b642;--red:#ef4444;--green:#22c55e;--blue:#3b82f6;--purple:#8b5cf6;--f-num:"Bahnschrift","DIN Alternate","Roboto Condensed","Segoe UI","PingFang SC",sans-serif;--tabh:58px;
+  /* 安全区（v0.16 起统一走这四个变量）：刘海、灵动岛、底部横条让出的距离。测试在无头浏览器里把它们换成 iPhone 的真实数值（47/59/62、34），见 tools/uicheck_fit.mjs */
+  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
 /* iPhone 横屏时不自动放大字号 */
@@ -20,8 +22,8 @@ h3{font-size:13px;margin:12px 0 6px;color:var(--muted);text-transform:none}
 .muted{color:var(--muted)}
 .small{font-size:12px}
 .mono{font-family:ui-monospace,Consolas,monospace}
-/* 安全区（env(safe-area-inset-*)）：iPhone 全屏模式下顶栏让出刘海和状态栏，横屏时左右也让出；没有刘海的设备上这些都是 0 */
-header{display:flex;align-items:center;gap:16px;padding:calc(10px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) 10px calc(16px + env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+/* 安全区（--sat/--sab/--sal/--sar，即 env(safe-area-inset-*)）：iPhone 全屏模式下顶栏让出刘海和状态栏，横屏时左右也让出；没有刘海的设备上这些都是 0 */
+header{display:flex;align-items:center;gap:16px;padding:calc(10px + var(--sat)) calc(16px + var(--sar)) 10px calc(16px + var(--sal));border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
 header nav{display:flex;gap:4px;flex-wrap:wrap}
 header nav button{border-radius:20px}
 header nav button.active{background:var(--accent);color:#1a1200;border-color:var(--accent)}
@@ -30,7 +32,7 @@ header .hdrsound{margin-left:auto;border-radius:20px;white-space:nowrap}
 @media (min-width:701px) and (max-width:1400px){header h1 .muted{display:none}}
 .sfxbtn.on{border-color:var(--accent);color:var(--accent)}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;border:1px solid var(--accent);padding:8px 14px;border-radius:8px;z-index:99;max-width:80vw}
-main{padding:14px calc(16px + env(safe-area-inset-right,0px)) 60px calc(16px + env(safe-area-inset-left,0px));max-width:1500px;margin:0 auto}
+main{padding:14px calc(16px + var(--sar)) 60px calc(16px + var(--sal));max-width:1500px;margin:0 auto}
 .view{display:none}.view.active{display:block}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .cols{display:grid;grid-template-columns:380px 1fr;gap:14px;align-items:start}
@@ -199,15 +201,16 @@ input.betrange{width:200px;height:28px;padding:0;border:0;background:none;accent
 /* 手机布局的底部导航与「更多」面板（src/ui/mobilenav.js）：电脑宽度下整块不出现 */
 .tabbar,.sheet,.sheetmask{display:none}
 .ico svg{display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-@media (max-width:700px){
-  header{flex-wrap:wrap;gap:8px;padding:calc(8px + env(safe-area-inset-top,0px)) calc(10px + env(safe-area-inset-right,0px)) 8px calc(10px + env(safe-area-inset-left,0px))}
+/* 手机布局：竖屏窄屏，或者横过来的手机（高度不到 500 像素，v0.16） */
+@media (max-width:700px),(max-height:500px){
+  header{flex-wrap:wrap;gap:8px;padding:calc(8px + var(--sat)) calc(10px + var(--sar)) 8px calc(10px + var(--sal))}
   header nav,header .hdrsound{display:none}
-  .toast{bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px) + 12px)}
-  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:20;height:calc(var(--tabh) + env(safe-area-inset-bottom,0px));padding:5px calc(4px + env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) calc(4px + env(safe-area-inset-left,0px));background:var(--panel);border-top:1px solid var(--line)}
+  .toast{bottom:calc(var(--tabh) + var(--sab) + 12px)}
+  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:20;height:calc(var(--tabh) + var(--sab));padding:5px calc(4px + var(--sar)) var(--sab) calc(4px + var(--sal));background:var(--panel);border-top:1px solid var(--line)}
   .tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:0;border-radius:10px;padding:0;height:calc(var(--tabh) - 10px);font-size:11px;line-height:1;color:var(--muted)}
   .tabbar button.on{color:var(--accent)}
   .sheetmask.open{display:block;position:fixed;left:0;right:0;top:0;bottom:0;z-index:18;background:rgba(0,0,0,.55)}
-  .sheet.open{display:block;position:fixed;left:0;right:0;bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px));z-index:19;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:16px 16px 0 0;padding:8px calc(14px + env(safe-area-inset-right,0px)) 14px calc(14px + env(safe-area-inset-left,0px));box-shadow:0 -12px 32px rgba(0,0,0,.45);animation:fxsheet .22s ease-out both}
+  .sheet.open{display:block;position:fixed;left:0;right:0;bottom:calc(var(--tabh) + var(--sab));z-index:19;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:16px 16px 0 0;padding:8px calc(14px + var(--sar)) 14px calc(14px + var(--sal));box-shadow:0 -12px 32px rgba(0,0,0,.45);animation:fxsheet .22s ease-out both}
   @keyframes fxsheet{from{transform:translateY(100%)}to{transform:none}}
   .sheet .grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px}
   .sheetgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -228,7 +231,7 @@ input.betrange{width:200px;height:28px;padding:0;border:0;background:none;accent
   header nav{gap:3px}
   header nav button{padding:4px 9px;font-size:12px}
   /* 底部留出底栏的高度（含安全区）再加 24 像素，最后一行内容和按钮不被底栏挡住 */
-  main{padding:10px calc(8px + env(safe-area-inset-right,0px)) calc(var(--tabh) + env(safe-area-inset-bottom,0px) + 24px) calc(8px + env(safe-area-inset-left,0px))}
+  main{padding:10px calc(8px + var(--sar)) calc(var(--tabh) + var(--sab) + 24px) calc(8px + var(--sal))}
   .grid13{gap:1px}
   .grid13 .cell{font-size:8px}
   .cards{--cw:28px}
@@ -423,18 +426,165 @@ input.betrange{width:200px;height:28px;padding:0;border:0;background:none;accent
 .ptable.still *,.ptable.still *::before,.ptable.still *::after{transition:none!important}
 /* 系统要求减少动态效果：反馈动效与「更多」面板一律不播，直接停在终态 */
 @media (prefers-reduced-motion:reduce){.stars3 svg,.pill,.evbar .fill,.sheet,.spopt,.chart .pt{animation:none!important}}
-/* 锁屏（v0.15，ui/lock.js）：盖住整页，游戏在解锁之前不启动。不用 inset 简写（旧安卓内核不认），四个方向分开写 */
-.lockscr{position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(28px + env(safe-area-inset-bottom,0px))}
+/* 锁屏的样式在 lock.css（v0.16） */
+
+/* 按设备调整画面（v0.16）。接在 style.css 后面（打包时两份样式表拼成一份 css/style.css），只管版面结构：
+   配色、字体、牌面、牌桌材质全在 style.css，这里一样都不改。
+   判断设备只用媒体查询（宽、高）和 viewport.js 量出来的可用高度，不看浏览器标识。
+   断点：手机竖屏 ≤700 宽；手机横屏 = 高度 ≤500（底栏改成竖在左边）；宽屏 ≥1000 宽且高度 >500（牌局页的记录一栏并排放在牌桌右边）。 */
+
+/* ---------------------------------------------------------------- 所有页面：点得到、看得清 */
+/* 按钮至少 44×44（苹果的最小触控尺寸），正文至少 13 像素 */
+button{min-height:44px;min-width:44px}
+.small,label,.note,.kv,.log,pre.review,table.tbl,.legend,.hand-log-item,.crumbs button,.chartlegend,.rpcount,textarea,.pcard .pid,.cmp .box .lbl,
+.evidence,.evidence h4,.clear .eb,.sheetgrid button{font-size:13px}
+/* 手机上（窄屏、横屏或触屏）输入框、下拉框、文本框仍是 16 像素：iPhone 点小于 16 像素的输入框会整页放大（上面那条 13 像素不能盖过它） */
+@media (max-width:700px),(max-height:500px),(pointer:coarse){input,select,textarea{font-size:16px}}
+/* 几处单独写了 40 像素高的按钮（速算题型、复盘四个签、变式题型）：一律 44 */
+.sptypes button,.rvtabs button,.vxtypes button{min-height:44px}
+/* 电脑、平板横屏：除了牌局页，内容区限制在易读的宽度里居中，不把手机版拉宽 */
+main{max-width:1180px}
+@media (min-width:1600px){main{max-width:1280px}}
+
+/* ---------------------------------------------------------------- 手机横屏：底栏竖在左边，不占本来就不多的高度 */
+@media (max-height:500px) and (min-width:560px){
+  .tabbar{top:0;bottom:0;right:auto;width:calc(64px + var(--sal));height:auto;grid-template-columns:1fr;grid-template-rows:repeat(5,minmax(44px,1fr));
+    padding:calc(4px + var(--sat)) 0 calc(4px + var(--sab)) var(--sal);border-top:0;border-right:1px solid var(--line)}
+  .tabbar button{height:auto;min-height:44px}
+  body{padding-left:calc(64px + var(--sal))}
+  header{padding-left:10px}
+  main{padding:10px calc(10px + var(--sar)) calc(16px + var(--sab)) 10px}
+  .sheet.open{left:calc(64px + var(--sal));bottom:0;padding-bottom:calc(14px + var(--sab))}
+  .toast{bottom:calc(var(--sab) + 12px)}
+}
+
+/* ---------------------------------------------------------------- 自由牌局：一屏放下（views/play.js、play/shell.js） */
+/* 页面占满一屏：上面牌桌（按剩下的高度缩放，tablelayout.js），下面固定高度的操作区；页面本身不上下滚 */
+body.playfit main{max-width:1640px;padding-top:8px;padding-bottom:0}
+:root{--dockh:104px}
+.playwrap{position:relative;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;gap:8px;margin-bottom:calc(var(--sab) + 8px);
+  height:calc(100vh - 140px);height:var(--playh,calc(100vh - 140px))}
+.playstage{position:relative;grid-row:1;grid-column:1;min-height:0;min-width:0}
+.ptable.fit{height:100%;max-width:none;margin:0;display:flex;align-items:center;justify-content:center}
+.ptable.fit .rail{flex:none}
+.playdock{grid-row:2;grid-column:1;height:var(--dockh);min-width:0;display:flex;flex-direction:column;justify-content:center}
+.playdock .actions{margin:0}
+.playact .betrange{height:44px}
+.playact .betamt input[type=number]{min-height:44px}
+.playdock .dockmsg{font-size:14px}
+.playdock .result{font-size:14px;line-height:1.45;max-height:4.4em;overflow:auto}
+.playdock .overbtns{display:flex;gap:8px;flex-wrap:wrap}
+.playwrap.replaying .playdock{height:auto;min-height:calc(var(--dockh) + 24px)}
+/* 牌桌左上角「桌子」、右上角「记录」：毡面圆角外面的空处，座位和下注不会摆到那里（uicheck_fit 量着） */
+.tblbtn{position:absolute;top:0;z-index:6;min-width:52px;height:44px;padding:0 10px;border-radius:12px;background:rgba(9,13,16,.82);font-size:14px}
+.tbset{left:0}.tblog{right:0}
+.playwrap.setopen .tblbtn{visibility:hidden}   /* 不用 display:none：牌桌摆座位时要让开它们的位置（tablelayout.js），弹层开着时也得量得到 */
+/* 桌子设置弹层：盖在牌桌上，里面自己滚；开桌之前一直摊开（没有 ×） */
+.playsheet{display:none;position:absolute;left:0;right:0;top:0;bottom:0;z-index:7;max-width:620px;margin:0 auto;overflow:auto;-webkit-overflow-scrolling:touch;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;flex-direction:column;gap:8px}
+.playwrap.setopen .playsheet{display:flex}
+.playwrap:not(.started) .playsheet .sheetx{display:none}
+.sheethead,.sidehead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sheethead h2,.sidehead h2{margin:0}
+.sheetx{border-radius:50%;font-size:20px;line-height:1;padding:0}
+.sheetbody{display:flex;flex-direction:column;gap:4px}
+.tablefields,.botfields{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:4px 10px}
+.tablefields select,.tablefields input,.botfields select{width:100%;min-height:44px}
+.sheetfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:auto}
+/* 「回放要用这张牌桌」那一问：盖在牌桌中间，操作区原样留着 */
+.stagepop{position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);z-index:7;max-width:560px;margin:0 auto;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+/* 记录一栏：本手记录、文字复盘、回放的胜率折线。窄屏时和牌桌占同一格、盖在上面，点「记录」才出来 */
+.playside{display:none;grid-row:1;grid-column:1;z-index:8;min-height:0;min-width:0;flex-direction:column;gap:6px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.playwrap.sideopen .playside{display:flex}
+.sidebody{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
+.playside .log{max-height:none}
+.playwrap[data-side=replay] .sidelog,.playwrap[data-side=replay] .playreview{display:none}
+.playwrap[data-side=log] .playchart{display:none}
+.rpside[data-reveal="1"] .rpsidehint,.playchart[data-reveal="1"] .rpsidehint{display:none}
+.rpside>*+*{margin-top:8px}
+/* 回放的控制区：上面一块文字（放不下在块里滚），下面两排按钮 */
+.playdock .replay{padding:0;border:0;background:none;display:flex;flex-direction:column;gap:6px}
+.replay .rptext{height:72px;overflow:auto;-webkit-overflow-scrolling:touch;font-size:14px;line-height:1.5}
+.replay[data-reveal="1"] .rptext{height:96px}
+.replay .rptext .rphead{display:inline;margin-right:6px}
+.replay .rptext .rphead h2{display:none}
+.replay .rpsay{display:inline;font-size:14px;min-height:0;padding:0}
+.replay .rpcall{margin:2px 0 0}
+.replay .rpctl{margin:0}
+.rpseekrow{display:flex;align-items:center;gap:8px;min-width:0}
+.rpseekrow .rpseek{flex:1;min-width:60px;width:auto}
+.rpseekrow .rptoggle{flex:none;white-space:nowrap}
+.rpseekrow .rpfoot{margin:0;flex:none}
+
+/* 宽屏（电脑、平板横屏）：记录一栏并排放在牌桌右边，一直看得见；操作区一排放下 */
+@media (min-width:1000px) and (min-height:501px){
+  .playwrap{grid-template-columns:minmax(0,1fr) clamp(300px,26vw,400px)}
+  .playside{display:flex;grid-column:2;grid-row:1 / span 2;z-index:auto}
+  .tblog,.playside .sheetx{display:none}
+  .playdock .playact{flex-wrap:wrap}
+}
+@media (min-width:701px) and (min-height:501px){
+  .replay .rptext .rphead h2{display:inline;font-size:14px;margin-right:6px}
+  .replay .rpctl{grid-template-columns:repeat(4,minmax(0,140px))}
+}
+
+/* 手机竖屏和手机横屏：牌局页把顶栏收起来（底栏上「牌局」亮着，知道在哪），给牌桌多留一行 */
+@media (max-width:700px),(max-height:500px){
+  body.playfit header{display:none}
+  body.playfit main{padding-top:calc(6px + var(--sat))}
+  .playwrap{gap:6px}
+  :root{--dockh:152px}
+  .playdock .playact{gap:6px}
+  .playact .quick button,.playact .betamt input{min-height:44px}
+  .playact .heroact button.big{min-height:48px}
+  .replay .rpctl{gap:6px}
+  .rpctl button{font-size:14px}
+  .replay .rptext{height:64px;font-size:13px}
+  .replay[data-reveal="1"] .rptext{height:84px}
+  .replay .rpsay{font-size:13px}
+}
+/* 手机竖屏：底栏本身已经让出了底部横条，牌局区域不用再让 */
+@media (max-width:700px) and (min-height:501px){.playwrap{margin-bottom:0}}
+/* 手机横屏：操作区放在牌桌右边一栏，记录一栏盖在牌桌上 */
+@media (max-height:500px) and (min-width:560px){
+  .playwrap{grid-template-columns:minmax(0,1fr) clamp(262px,38vw,330px);grid-template-rows:minmax(0,1fr);margin-bottom:var(--sab)}
+  .playact .quick{gap:4px}
+  body.playfit main{padding-bottom:0}
+  .playdock{grid-row:1;grid-column:2;height:auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;justify-content:flex-start}
+  .playwrap.replaying .playdock{min-height:0}
+  .playdock .replay{min-height:100%}
+  .replay .rptext,.replay[data-reveal="1"] .rptext{height:auto;flex:1 1 0;min-height:96px}
+  .rpseekrow{flex-wrap:wrap}
+  .rpseekrow .rpseek{flex-basis:100%}
+}
+
+/* 锁屏的样式（v0.16 从 style.css 拆出来；打包时接在 style.css、layout.css 后面拼成一份 css/style.css） */
+/* 锁屏（v0.15，ui/lock.js）：盖住整页，游戏在解锁之前不启动。不用 inset 简写（旧安卓内核不认），四个方向分开写。
+   v0.16 一屏放下：设备码、复制、粘贴框、解锁在所有手机、平板、电脑和各种打开方式（含微信里）下同时看得见；次要的说明收进「怎么用」；手机横屏左右两栏 */
+.lockscr{position:fixed;top:0;right:0;bottom:0;left:0;z-index:100;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;
+  padding:calc(12px + var(--sat)) calc(12px + var(--sar)) calc(12px + var(--sab)) calc(12px + var(--sal))}
 body.locked{overflow:hidden}
-.lockcard{max-width:560px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 18px 14px;line-height:1.75}
-.lockcard h2{font-size:20px;margin:0 0 6px}
-.lockdevlbl{display:block;color:var(--muted);font-size:13px;margin:14px 0 4px}
-.lockdev{font:700 30px/1.25 var(--f-num);letter-spacing:.08em;color:var(--accent);word-break:break-all;-webkit-user-select:all;user-select:all}
-.lockrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0}
-.lockrow button{min-height:44px;padding:8px 18px;font-size:15px}
+.lockcard{width:100%;max-width:560px;margin:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;line-height:1.55}
+.lockcard h2{font-size:19px;margin:0 0 4px}
+.lockcard p{margin:4px 0}
+.lockdevlbl{display:block;color:var(--muted);font-size:13px;margin:10px 0 2px}
+.lockdevrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.lockdev{font:700 26px/1.2 var(--f-num);letter-spacing:.05em;color:var(--accent);word-break:break-all;-webkit-user-select:all;user-select:all}
+.lockrow{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:6px 0}
+.lockcard button{min-height:44px;padding:8px 14px;font-size:15px}
+.lockcopied:empty{display:none}
 .lockcopybox{width:100%;margin-top:6px;font-size:16px}
-.lockinput{font-size:16px;min-height:76px}
-.lockhint{background:rgba(245,182,66,.1);border:1px solid rgba(245,182,66,.45);border-radius:8px;padding:8px 12px;margin:12px 0 0}
-.lockmsg{min-height:1.6em;margin:6px 0;font-weight:600}
+.lockinput{font-size:16px;min-height:64px;height:64px}
+.lockhint{background:rgba(245,182,66,.1);border:1px solid rgba(245,182,66,.45);border-radius:8px;padding:6px 10px;margin:10px 0 0;font-size:14px}
+.lockmsg{flex:1;min-width:8em;margin:0;font-weight:600}
+.lockmsg:empty{display:none}
 .lockmsg[data-kind=format],.lockmsg[data-kind=device],.lockmsg[data-kind=signature],.lockmsg[data-kind=expired],.lockmsg[data-kind=nocrypto],.lockmsg[data-kind=empty],.lockmsg[data-kind=error]{color:#fca5a5}
 .lockmsg[data-kind=busy]{color:var(--muted)}
+.lockmore{margin-top:6px;color:var(--muted);font-size:13px}
+.lockmore summary{cursor:pointer;color:var(--accent);min-height:44px;display:flex;align-items:center}
+@media (max-height:500px) and (min-width:560px){
+  .lockcard{max-width:900px;display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+  .lockcard h2{font-size:17px}
+  .lockdev{font-size:24px}
+}

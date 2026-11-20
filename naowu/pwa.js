@@ -63,15 +63,26 @@
       || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
       || (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches);
   }
+  // 提示文字按「在哪儿打开的」换（只用来换文字，版面一律按屏幕尺寸，v0.16）：
+  //   微信、QQ 的内置浏览器（标识里有 MicroMessenger、QQ/）不能添加到主屏幕，先劝换到 Safari（安卓是「在浏览器打开」）；
+  //   iPhone、iPad 上的 Chrome 和 Edge 也能添加到主屏幕（iOS 16.4 起），入口在分享菜单里，和 Safari 不在同一个地方；Firefox 劝用 Safari。
+  //   iPad 上的 Safari 标识成 Mac（MacIntel），要结合触点数认出来。
   function tipText() {
     var ua = navigator.userAgent || '';
     var ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (ios) {
-      if (/CriOS|FxiOS|EdgiOS/.test(ua)) return '用 Safari 打开这个网址，点分享按钮，选「添加到主屏幕」，以后可以像应用一样全屏、断网使用。';
-      if (/iPad/.test(ua) || navigator.platform === 'MacIntel') return '点地址栏旁边的分享按钮，选「添加到主屏幕」，以后可以像应用一样全屏、断网使用。';
-      return '点底部的分享按钮，选「添加到主屏幕」，以后可以像应用一样全屏、断网使用。';
+    var tail = '，以后可以像应用一样全屏、断网使用。';
+    if (/MicroMessenger|QQ\//.test(ua)) {
+      return ios ? '你是在微信或 QQ 里打开的，这里不能添加到主屏幕：点右上角的「…」，选「在 Safari 中打开」，再在 Safari 里点分享按钮，选「添加到主屏幕」' + tail
+        : '你是在微信或 QQ 里打开的：点右上角的「…」，选「在浏览器打开」，再在浏览器的菜单里选「添加到主屏幕」或「安装应用」' + tail;
     }
-    if (/Android/.test(ua)) return '点浏览器的菜单（右上角的三个点），选「添加到主屏幕」或「安装应用」，以后可以像应用一样全屏、断网使用。';
+    if (ios) {
+      if (/FxiOS/.test(ua)) return '用 Safari 打开这个网址，点分享按钮，选「添加到主屏幕」' + tail;
+      if (/CriOS/.test(ua)) return '点地址栏右边的分享按钮，选「添加到主屏幕」' + tail;
+      if (/EdgiOS/.test(ua)) return '点底部的「…」菜单，选「分享」，再选「添加到主屏幕」' + tail;
+      if (/iPad/.test(ua) || navigator.platform === 'MacIntel') return '点地址栏旁边的分享按钮，选「添加到主屏幕」' + tail;
+      return '点底部的分享按钮（地址栏放在顶上时点顶部的），选「添加到主屏幕」' + tail;
+    }
+    if (/Android/.test(ua)) return '点浏览器的菜单（右上角的三个点），选「添加到主屏幕」或「安装应用」' + tail;
     return '';
   }
   function closed() { try { return localStorage.getItem(TIP_KEY) === '1'; } catch (e) { return false; } }

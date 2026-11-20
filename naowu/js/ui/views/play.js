@@ -4,11 +4,14 @@ __squidDefine('src/ui/views/play.js', function (exports) {
 // 这个文件只做「引擎 ↔ 牌桌」的翻译和页面编排：tableView() 把引擎状态翻译成牌桌组件吃的普通对象，
 // 下面几个流程函数决定一手牌的节奏（机器人想一下 → 动作气泡和筹码 → 收池、翻牌 → 下一个）。
 // 牌桌怎么画、怎么动在 ../table.js，牌面在 ../cards.js，音效在 ../sfx.js（开关在页面顶栏，见 ../settings.js）。
-// 牌局回放（../replay/replay.js）借用同一个牌桌：回放时操作区和本手记录收起来，「回到牌局」再把引擎此刻的画面放回去。
+// 牌局回放（../replay/replay.js）借用同一个牌桌：回放时操作区换成回放的控制条，「回到牌局」再把引擎此刻的画面放回去。
+// 页面骨架（v0.16 一屏放下：牌桌、操作区、记录一栏、桌子设置弹层）在 ../play/shell.js，轮到你时的按钮在 ../play/heroact.js。
 const { HeuristicBot, PROFILES } = __squidRequire('src/engine/bot.js');
 const { HandEngine, positionName, handToText } = __squidRequire('src/engine/game.js');
 const { analyzeHand, buildLLMPrompt } = __squidRequire('src/review/review.js');
 const { h, $, f1, toast } = __squidRequire('src/ui/dom.js');
+const { heroControls } = __squidRequire('src/ui/play/heroact.js');
+const { buildShell } = __squidRequire('src/ui/play/shell.js');
 const { switchView } = __squidRequire('src/ui/router.js');
 const { store } = __squidRequire('src/ui/services.js');
 const { sfx } = __squidRequire('src/ui/sfx.js');
@@ -16,7 +19,9 @@ const { mountReplay } = __squidRequire('src/ui/replay/replay.js');
 const { createTable } = __squidRequire('src/ui/table.js');
 const { solverState } = __squidRequire('src/ui/views/solver.js');
 
-const playState = { engine: null, seats: [], handNo: 0, button: 0, lastRecord: null, analysis: null, session: 0, recorded: null, table: null, openReplay: null };
+const playState = { engine: null, seats: [], handNo: 0, button: 0, lastRecord: null, analysis: null, session: 0, recorded: null, table: null, openReplay: null, hold: false };
+// 测试钩子（tools/uicheck_fit.mjs）：hold(true) 让机器人先别出手，页面停在「等待对手」，好量这一刻的版面；hold(false) 接着打
+if (typeof window !== 'undefined') window.__squidPlayTest = { hold: (on) => { playState.hold = !!on; } };
 
 /** 没有牌局时的空桌（回放结束、而之前没开过桌或放弃了这一手） */
 const BLANK = { key: 'blank', hero: 0, button: -1, acting: -1, board: [], pot: 0, seats: [], awards: null, done: false, say: null };
@@ -76,40 +81,42 @@ function buildPlayView() {
   const cfg = { n: 3, stack: 100, sb: 0.5, bb: 1, profiles: ['balanced', 'tight', 'station', 'maniac', 'balanced', 'tight'], seed: 0 };
   const nSel = h('select', { onchange: (e) => { cfg.n = Number(e.target.value); renderProfiles(); } }, [2, 3, 4, 5, 6].map((n) => h('option', { value: n, selected: n === cfg.n }, `${n} 人`)));
   const stackIn = h('input', { type: 'number', value: cfg.stack, oninput: (e) => (cfg.stack = Number(e.target.value)) });
-  const profilesEl = h('div', { class: 'row' });
+  const profilesEl = h('div', { class: 'botfields' });
   function renderProfiles() {
     profilesEl.innerHTML = '';
     for (let i = 1; i < cfg.n; i++) profilesEl.append(h('div', { class: 'field' }, h('label', {}, `机器人 ${i}`), h('select', { onchange: (e) => (cfg.profiles[i] = e.target.value) }, Object.entries(PROFILES).map(([k, p]) => h('option', { value: k, selected: cfg.profiles[i] === k }, p.cn)))));
   }
   renderProfiles();
   if (playState.table) playState.table.destroy();
-  const tableEl = h('div');
+  const tableEl = h('div', { class: 'fit' });
   const table = createTable(tableEl);
   playState.table = table;
-  const actionsEl = h('div', { class: 'actions playact' });
-  const logEl = h('div', { class: 'log' });
-  const reviewEl = h('div');
-  const replayEl = h('div', { class: 'replayhost', style: { display: 'none' } });
-  let replayCtl = null;
   const newBtn = h('button', { class: 'primary', onclick: () => newSession() }, '开新桌');
-  const nextBtn = h('button', { onclick: () => nextHand(), disabled: true }, '下一手');
+  const shell = buildShell({ tableEl, newBtn, fields: [h('div', { class: 'tablefields' }, h('div', { class: 'field' }, h('label', {}, '人数'), nSel), h('div', { class: 'field' }, h('label', {}, '起始后手(bb)'), stackIn)), profilesEl] });
+  const actionsEl = h('div', { class: 'actions playact' });
+  const logEl = shell.log;
+  const reviewEl = shell.review;
+  const replayEl = h('div', { class: 'replayhost', style: { display: 'none' } });
+  shell.dock.append(actionsEl, replayEl);
+  let replayCtl = null, askEl = null;
 
   // 流程计数：每开一手、每开一桌加一。上一手还在播的动画和机器人循环看到对不上就停，不会改到下一手的画面。
   const flow = { gen: 0 };
 
   function newSession() {
     closeReplay(false);
+    shell.settings(false); shell.started();
     playState.session++;
     playState.seats = [];
     for (let i = 0; i < cfg.n; i++) playState.seats.push({ name: i === 0 ? '你' : `${PROFILES[cfg.profiles[i]].cn}${i}`, stack: cfg.stack * cfg.bb, isHero: i === 0, bot: i === 0 ? null : new HeuristicBot(cfg.profiles[i], 100 + i) });
     playState.handNo = 0; playState.button = cfg.n - 1;
     playState.engine = null;   // 上一桌打到一半也直接作废
     logEl.textContent = '';
-    nextBtn.disabled = false;
     nextHand();
   }
   async function nextHand() {
     if (playState.engine && !playState.engine.over) { toast('本手还没结束'); return; }
+    if (!playState.seats.length) { newSession(); return; }
     closeReplay(false);
     // 淘汰 0 筹码的机器人：补满
     for (const s of playState.seats) if (s.stack <= 0) { s.stack = cfg.stack * cfg.bb; }
@@ -130,6 +137,7 @@ function buildPlayView() {
     const alive = () => g === flow.gen && eng === playState.engine;
     while (!eng.over && !eng.isHeroTurn()) {
       await sleep(PACE.think); if (!alive()) return;
+      while (playState.hold) { await sleep(60); if (!alive()) return; }
       const s = eng.toActSeat;
       const pre = tableView(eng);
       const d = s.bot.decide(eng);
@@ -170,6 +178,7 @@ function buildPlayView() {
     const eng = playState.engine;
     if (eng.over && playState.recorded !== eng) finishHand();
   }
+  const nextBtn = () => h('button', { class: 'primary', onclick: () => nextHand() }, '下一手');
   /**
    * 操作区。只在画面静止时画出可点的按钮（等待对手、动画进行中 busy 都不给点），
    * 同时在牌桌根元素上写下引擎此刻的总底池与各家后手，测试拿它和页面上显示的数对账。
@@ -179,45 +188,22 @@ function buildPlayView() {
     actionsEl.innerHTML = '';
     const idle = !busy && !!eng && (eng.over || eng.isHeroTurn());
     tableEl.dataset.idle = idle ? '1' : '0';
+    actionsEl.dataset.state = !eng ? (playState.seats.length ? 'blank' : 'setup') : !idle ? 'wait' : eng.over ? 'over' : 'hero';
     if (eng) { tableEl.dataset.enginePot = String(round3(eng.pot)); tableEl.dataset.engineStacks = eng.seats.map((s) => round3(s.stack)).join(','); }
-    if (!eng) return;
-    if (!idle) { actionsEl.append(h('span', { class: 'muted' }, eng.over || eng.isHeroTurn() ? '…' : '等待对手…')); return; }
-    if (eng.over) {
-      const r = eng.result;
-      actionsEl.append(h('span', {}, '结果：', r.pots.map((p) => `${f1(p.amount)} → ${p.winners.map((w) => eng.seats[w].name).join('/')}${p.best ? '（' + p.best + '）' : ''}`).join('；')), h('span', { class: 'mono' }, ` 你本手 ${r.net[eng.hero.seat] >= 0 ? '+' : ''}${f1(r.net[eng.hero.seat])}`));
-      actionsEl.append(h('button', { onclick: () => reviewHand() }, '复盘这手'), h('button', { class: 'primary', onclick: () => startReplay(playState.lastRecord) }, '回放这手'));
+    if (!eng) {
+      // 开桌之前：桌子设置摊开在牌桌上；放弃了一手回到空桌时：点「下一手」接着打
+      if (playState.seats.length) actionsEl.append(h('span', { class: 'muted dockmsg' }, '这一桌还在，点「下一手」接着打；换人数或对手点左上角「桌子」。'), nextBtn());
+      else actionsEl.append(h('span', { class: 'muted dockmsg' }, '选好人数和每个机器人的打法，点「开新桌」。'), h('button', { class: 'primary', onclick: () => newSession() }, '开新桌'));
       return;
     }
-    // 两块：下注金额（快捷档位一排、滑杆 + 金额框）在上，弃牌 / 过牌或跟注 / 下注三个大键一排在下。
-    // 金额的算法、快捷档位、最小最大下注额都和原来一样，滑杆只是金额框的另一个入口，两边双向同步。
-    const legal = eng.legalActions();
-    const btnRow = h('div', { class: 'heroact' });
-    let betCtl = null;
-    for (const a of legal) {
-      if (a.kind === 'fold') btnRow.append(h('button', { class: 'danger big', onclick: () => heroAct('fold') }, '弃牌'));
-      else if (a.kind === 'check') btnRow.append(h('button', { class: 'big', onclick: () => heroAct('check') }, '过牌'));
-      else if (a.kind === 'call') btnRow.append(h('button', { class: 'big', onclick: () => heroAct('call') }, `跟注 ${f1(a.amount)}${a.allin ? '(全下)' : ''}`));
-      else {
-        const pot = eng.pot, toCall = a.toCall;
-        const verb = a.kind === 'bet' ? '下注到' : '加注到';
-        const amt = h('input', { type: 'number', value: Math.min(a.maxTo, Math.max(a.minTo, Math.round((pot + toCall) * 0.66 + toCall + eng.hero.streetBet))), min: a.minTo, max: a.maxTo, step: cfg.sb, 'aria-label': verb + '多少' });
-        const slider = h('input', { type: 'range', class: 'betrange', min: a.minTo, max: a.maxTo, step: cfg.sb, value: amt.value, 'aria-label': verb + '多少（滑杆）' });
-        const go = h('button', { class: 'primary big bet', onclick: () => heroAct(a.kind, Number(amt.value)) }, verb);
-        // 金额框 → 滑杆：滑杆自己会把超出范围的值钳到 [minTo, maxTo]；按钮上跟着显示金额
-        const fromBox = () => { slider.value = amt.value; go.textContent = `${verb} ${f1(Number(amt.value))}`; };
-        const setAmt = (x) => { amt.value = x; fromBox(); };
-        slider.addEventListener('input', () => setAmt(slider.value));
-        amt.addEventListener('input', fromBox);
-        const quick = (frac, label) => h('button', { class: 'small', onclick: () => setAmt(Math.min(a.maxTo, Math.max(a.minTo, Math.round(eng.hero.streetBet + toCall + frac * (pot + toCall))))) }, label);
-        betCtl = h('div', { class: 'betctl' },
-          h('div', { class: 'quick' }, quick(0.33, '1/3'), quick(0.5, '1/2'), quick(0.75, '3/4'), quick(1, '底池'), h('button', { class: 'small', onclick: () => setAmt(a.maxTo) }, '全下')),
-          h('div', { class: 'betamt' }, slider, amt));
-        btnRow.append(go);
-        fromBox();
-      }
+    if (!idle) { actionsEl.append(h('span', { class: 'muted dockmsg' }, eng.over || eng.isHeroTurn() ? '…' : '等待对手…')); return; }
+    if (eng.over) {
+      const r = eng.result, net = r.net[eng.hero.seat];
+      actionsEl.append(h('div', { class: 'result' }, h('span', {}, '结果：', r.pots.map((p) => `${f1(p.amount)} → ${p.winners.map((w) => eng.seats[w].name).join('/')}${p.best ? '（' + p.best + '）' : ''}`).join('；')), h('b', { class: 'mono' }, ` 你本手 ${net >= 0 ? '+' : ''}${f1(net)}`)));
+      actionsEl.append(h('div', { class: 'overbtns' }, nextBtn(), h('button', { onclick: () => startReplay(playState.lastRecord) }, '回放这手'), h('button', { onclick: () => reviewHand() }, '复盘这手')));
+      return;
     }
-    if (betCtl) actionsEl.append(betCtl);
-    actionsEl.append(btnRow);
+    actionsEl.append(...heroControls(eng, cfg.sb, heroAct));
   }
   function appendLog() {
     const eng = playState.engine;
@@ -233,8 +219,10 @@ function buildPlayView() {
     playState.lastRecord = eng.toRecord();
     store.addHand(playState.lastRecord);
   }
+  /** 文字复盘：写在「记录」一栏里（手机上把这一栏弹出来） */
   function reviewHand(rec = playState.lastRecord) {
     if (!rec) return;
+    shell.panel(true, 'log');
     reviewEl.innerHTML = '';
     reviewEl.append(h('div', { class: 'muted small' }, '计算中（权益按枚举精确计算，可能需要几秒）…'));
     setTimeout(() => {
@@ -245,46 +233,51 @@ function buildPlayView() {
         reviewEl.append(h('h3', {}, '每局详细解析'), h('pre', { class: 'review' }, an.text));
         if (an.solverSpecs.length) reviewEl.append(h('div', { class: 'row' }, an.solverSpecs.map((s) => h('button', { onclick: () => { solverState.applySpec({ players: s.players, board: s.board, pot: s.pot, stack: s.stack, ranges: s.ranges }); switchView('solver'); toast(`已载入 ${s.streetCn} 决策点（假设范围），点“开始解算”`); } }, `用解算器解：${s.streetCn}`))));
         reviewEl.append(h('button', { onclick: () => { const p = buildLLMPrompt(rec, an, handToText(rec)); navigator.clipboard && navigator.clipboard.writeText(p); toast('大模型复盘提示词已复制到剪贴板（数字已算好，让它只做讲解）'); } }, '复制给 AI 讲解的提示词'));
+        reviewEl.scrollIntoView({ block: 'nearest' });
       } catch (e) { reviewEl.textContent = '复盘失败：' + e.message; }
     }, 30);
   }
-  // ---- 牌局回放：借用这张牌桌，操作区和本手记录先收起来
-  const colsEl = h('div', { class: 'cols cols-even' }, h('div', {}, h('h3', {}, '本手记录'), logEl), reviewEl);
+  // ---- 牌局回放：借用这张牌桌，操作区换成回放的控制条，记录一栏换成胜率折线
   function startReplay(rec) {
     if (!rec) return;
     closeReplay(false);
     flow.gen++;   // 这手已经结束；还在演的派彩动画、机器人循环看到计数变了就停，不再碰牌桌
-    vis(actionsEl, false); vis(colsEl, false); vis(replayEl, true);
-    replayCtl = mountReplay({ host: replayEl, table, rec, onExit: () => closeReplay(true), onReview: (r) => { closeReplay(true); reviewHand(r); reviewEl.scrollIntoView({ block: 'nearest' }); } });
+    vis(actionsEl, false); vis(replayEl, true);
+    shell.wrap.classList.add('replaying');
+    shell.panel(false, 'replay'); shell.logLabel('胜率图');
+    replayCtl = mountReplay({ host: replayEl, table, rec, chartHost: shell.chart,
+      onExit: () => closeReplay(true), onReview: (r) => { closeReplay(true); reviewHand(r); } });
   }
   /** 收起回放。restore 为真时把引擎此刻的画面（或空桌）放回牌桌、重画操作区 */
   function closeReplay(restore) {
     if (replayCtl) { replayCtl.destroy(); replayCtl = null; }
-    replayEl.innerHTML = ''; vis(replayEl, false); vis(actionsEl, true); vis(colsEl, true);
+    if (askEl) { askEl.remove(); askEl = null; }
+    replayEl.innerHTML = ''; shell.chart.innerHTML = '';
+    vis(replayEl, false); vis(actionsEl, true);
+    if (shell.wrap.classList.contains('replaying')) { shell.wrap.classList.remove('replaying'); shell.panel(false, 'log'); shell.logLabel('记录'); }
     if (!restore) return;
     const eng = playState.engine;
     table.show(eng ? tableView(eng) : BLANK, { instant: true });
     renderActions();
   }
-  /** 从历史进回放：正在打的一手没结束时不动它，先问打完还是放弃（放弃 = 这手不记录、筹码回到这手开始前） */
+  /** 从历史进回放：正在打的一手没结束时不动它，先问打完还是放弃（放弃 = 这手不记录、筹码回到这手开始前）。问话盖在牌桌上，操作区原样留着 */
   playState.openReplay = (rec) => {
     const eng = playState.engine;
     if (!eng || eng.over) { startReplay(rec); return; }
     closeReplay(false);
-    vis(replayEl, true);
-    replayEl.append(h('div', { class: 'panel replayask' },
+    askEl = h('div', { class: 'panel replayask stagepop' },
       h('div', { class: 'note' }, `第 ${eng.handNo} 手还没打完。回放要用这张牌桌：可以先回去打完这手再回放，也可以放弃这一手（不记录，筹码回到这手开始前）。`),
       h('div', { class: 'row' },
-        h('button', { onclick: () => { replayEl.innerHTML = ''; vis(replayEl, false); } }, '回去打完这手'),
+        h('button', { onclick: () => { askEl.remove(); askEl = null; } }, '回去打完这手'),
         h('button', { class: 'danger', onclick: () => {
           const e2 = playState.engine;
           if (e2 && !e2.over) { flow.gen++; playState.engine = null; logEl.textContent = ''; }
           startReplay(rec);
-        } }, '放弃这一手，开始回放'))));
-    replayEl.scrollIntoView({ block: 'nearest' });
+        } }, '放弃这一手，开始回放')));
+    shell.stage.append(askEl);
   };
-  v.append(h('div', { class: 'panel' }, h('div', { class: 'row' }, h('div', { class: 'field' }, h('label', {}, '人数'), nSel), h('div', { class: 'field' }, h('label', {}, '起始后手(bb)'), stackIn), profilesEl, newBtn, nextBtn)),
-    tableEl, replayEl, actionsEl, colsEl);
+  v.append(shell.wrap);
+  renderActions();
 }
 
 exports.openReplay = openReplay;

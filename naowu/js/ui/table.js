@@ -15,21 +15,18 @@ __squidDefine('src/ui/table.js', function (exports) {
 //   say      { seat, text } 一次性的动作气泡（可以没有）
 //   awards   [{ amount, winners:[座位号] }] 结束时每个池（主池、边池）分给谁；done 这手已经结束
 //
-// 尺寸：用 ResizeObserver 量牌桌宽度，把牌宽等写成像素 CSS 变量，窄于 NARROW 像素时加 narrow 类。
+// 尺寸：用 ResizeObserver 量牌桌能用的宽高（tablelayout.js），把牌宽等写成像素 CSS 变量，毡面窄时加 narrow 类。
 // 不用容器查询和 cqw（旧安卓内核不认），也不用独立的 translate/rotate/scale 属性：
 // 居中定位的 transform 写在外层元素上，动画只动内层，互不覆盖。
-const { placeBets } = __squidRequire('src/ui/betspot.js');
 const { placeBubble } = __squidRequire('src/ui/bubble.js');
 const { cardEl, setCardFace } = __squidRequire('src/ui/cards.js');
 const { f1 } = __squidRequire('src/ui/dom.js');
 const { centerIn, holeRect, rectOf } = __squidRequire('src/ui/feltrect.js');
 const { sfx } = __squidRequire('src/ui/sfx.js');
+const { EDGE, layoutTable } = __squidRequire('src/ui/tablelayout.js');
 
-const NARROW = 560;      // 牌桌宽度低于这个像素就换竖椭圆布局、收起位置名
-const EDGE = 4;          // 座位、筹码离毡面边缘至少留这么多像素
 const LONGEST = 599.5;   // 起始后手 100、6 人桌全桌 600：下注、底池、后手最长显示成「599.5」
 
-const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const reduceMotion = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -148,82 +145,8 @@ function createTable(root) {
     layout();
   }
 
-  // ---------------------------------------------------------------- 位置
-  /** 量牌桌宽度，算出毡面高度、牌的尺寸和每个元素的位置（全部是像素） */
-  function layout() {
-    const W0 = root.clientWidth;
-    if (!W0) return;   // 视图没显示（display:none）时量不到，等显示出来 ResizeObserver 会再叫一次
-    const narrow = W0 < NARROW;
-    root.classList.toggle('narrow', narrow);
-    const n = T.seats.length || 3;
-    const pad = Math.round(clamp(W0 * (narrow ? 0.026 : 0.021), 6, 18));
-    const W = W0 - 2 * pad;
-    const H = Math.round(W * (narrow ? (n >= 5 ? 1.3 : 1.12) : (n >= 5 ? 0.62 : 0.5625)));
-    rail.style.padding = pad + 'px';
-    rail.style.borderRadius = Math.round(W0 * (narrow ? 0.32 : 0.26)) + 'px';
-    felt.style.height = H + 'px';
-    felt.style.borderRadius = Math.round(W * (narrow ? 0.3 : 0.24)) + 'px';
-    const px = (v) => Math.round(v) + 'px';
-    // 牌宽：公共牌 --cw、对手 --cwo、自己 --cwh（自己的最大）。窄桌上按比例放大一点，不然手机上自己的牌只有指甲盖大
-    root.style.setProperty('--cw', px(clamp(W * (narrow ? 0.072 : 0.06), 22, 54)));
-    root.style.setProperty('--cwo', px(clamp(W * (narrow ? 0.056 : 0.046), 18, 42)));
-    root.style.setProperty('--cwh', px(clamp(W * (narrow ? 0.1 : 0.07), 26, 62)));
-    felt.style.fontSize = px(clamp(W * 0.015, 11, 14));
-    // 后手数字的格子按最长一档「599.5」留宽（--stkw，量尺是 probe 里的样板）：名牌宽度不随后手数字变，座位和下注的位置也就不随后手变。
-    // v0.14.3 用「名牌宽减后手宽再加最长一档」去估，两个宽度的小数部分随数字变，找空位时会跳到另一处——一手牌里下注标签跟着后手跳（v0.14.4 修）
-    root.style.setProperty('--stkw', probe.children[2].getBoundingClientRect().width + 'px');
-
-    const place = (e, x, y) => {
-      const w = e.offsetWidth, h = e.offsetHeight;
-      e.style.left = px(clamp(x, w / 2 + EDGE, W - w / 2 - EDGE));
-      e.style.top = px(clamp(y, h / 2 + EDGE, H - h / 2 - EDGE));
-    };
-    const cx = W / 2, cy = H / 2;
-    const resized = T.size !== W + 'x' + H;
-    T.size = W + 'x' + H;
-    place(mark, cx, H * 0.29);
-    place(boardEl, cx, H * (narrow ? 0.44 : 0.46));
-    place(potEl, cx, H * (narrow ? 0.57 : 0.62));
-    const last = T.last;
-    if (!last) return;
-    const hero = last.hero || 0;
-    // 座位：自己在正下方；其余按座位号顺时针等分椭圆（屏幕坐标 y 朝下，角度增大即顺时针）
-    const ang = (i) => ((90 + ((i - hero + n) % n) * 360 / n) * Math.PI) / 180;
-    const rx = W * (narrow ? 0.36 : 0.4), ry = H * (narrow ? 0.4 : 0.37);
-    const bx = W * (narrow ? 0.25 : 0.27), by = H * (narrow ? 0.24 : 0.25);
-    T.seats.forEach((s, i) => {
-      const a = ang(i);
-      if (i === hero) place(s.el, cx, H - s.el.offsetHeight / 2 - EDGE);
-      else place(s.el, cx + rx * Math.cos(a), cy + ry * Math.sin(a));
-    });
-    // 庄家按钮在座位朝桌心那一侧、偏前一点
-    if (last.button >= 0 && last.button < n) {
-      const a = ang(last.button) - (24 * Math.PI) / 180;
-      place(dbtn, cx + bx * 1.05 * Math.cos(a), cy + by * 1.1 * Math.sin(a));
-      dbtn.hidden = false;
-    } else dbtn.hidden = true;
-    // 下注：先照原来的算法得到想摆的点（座位和桌心之间、偏后一点），再交给 betspot.js 让开名牌、手牌、公共牌五张的位置、底池、庄家按钮
-    // 和别家的下注（标签、底池、后手都按最长一档「599.5」量，量尺是 probe 里那几块看不见的样板）。没问题的座位原样不动
-    const f = felt.getBoundingClientRect();
-    const [pb, pp] = probe.children;
-    const pc = centerIn(potEl, felt);
-    const hard = [rectOf(boardEl, f), { l: pc.x - pp.offsetWidth / 2, t: pc.y - pp.offsetHeight / 2, r: pc.x + pp.offsetWidth / 2, b: pc.y + pp.offsetHeight / 2 }];
-    if (!dbtn.hidden) hard.push(rectOf(dbtn, f));
-    const seatsC = T.seats.map((s) => {
-      hard.push(rectOf(s.plate, f), holeRect(s.hole, f));   // 名牌的后手格子已经按最长一档留宽（--stkw），不用再估
-      return centerIn(s.el, felt);
-    });
-    const want = T.seats.map((s, i) => { const ab = ang(i) + (22 * Math.PI) / 180; return { x: cx + bx * Math.cos(ab), y: cy + by * Math.sin(ab) }; });
-    const spots = placeBets({ W, H, R: parseFloat(felt.style.borderRadius) || 0, edge: EDGE, cx, cy, box: { w: pb.offsetWidth, h: pb.offsetHeight }, want, seats: seatsC, hard });
-    T.seats.forEach((s, i) => {
-      s.betAt = { x: Math.round(spots[i].x), y: Math.round(spots[i].y) };
-      s.betBox = spots[i].box;
-      s.bet.style.left = s.betAt.x + 'px'; s.bet.style.top = s.betAt.y + 'px';
-    });
-    // 牌桌大小变了（转屏、拉窗口）：亮着的气泡跟着重新找位置。大小没变就不动它，免得气泡亮着的时候跳一下
-    // 收着的气泡（透明）也挪回左上角：它们还停在旧尺寸下的位置的话，牌桌变窄后会伸出页面右边、让手机上整页能横向滚动
-    if (resized) T.seats.forEach((s, i) => { if (s.say.classList.contains('on')) placeSay(i); else { s.say.style.left = '0px'; s.say.style.top = '0px'; } });
-  }
+  // ---------------------------------------------------------------- 位置（量尺寸、摆座位和下注，在 tablelayout.js）
+  function layout() { layoutTable({ root, rail, felt, mark, boardEl, potEl, dbtn, probe, T, placeSay }); }
 
   /** 给座位 i 的气泡找位置（见 bubble.js）：不压任何人的名牌、手牌，不压公共牌、底池、下注 */
   function placeSay(i) {

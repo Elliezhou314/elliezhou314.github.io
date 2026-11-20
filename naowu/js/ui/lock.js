@@ -12,16 +12,18 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
  */
 function lockHint(ua, platform, touchPoints, standalone) {
   const ios = /iPhone|iPad|iPod/.test(ua) || (platform === 'MacIntel' && touchPoints > 1);
-  const where = '微信或 QQ 里、浏览器里、主屏幕的图标里这几处的存储是分开的，在这里解锁了，换个地方打开还要再解锁一次（设备码也不一样）。想就在这里玩也行，照下面的步骤解锁。';
+  // v0.16：锁屏要一屏放下，屏幕上只留一句「怎么做」（text），为什么要这样做（more）收进「怎么用」里
+  const where = '微信或 QQ 里、浏览器里、主屏幕的图标里这几处的存储是分开的，在这里解锁了，换个地方打开还要再解锁一次（设备码也不一样）。想就在这里玩也行，照上面的步骤解锁。';
   if (/MicroMessenger|QQ\//.test(ua)) {
-    return ios ? { kind: 'inapp-ios', text: '你现在是在微信或 QQ 里打开的。<b>建议点右上角的「…」，选「在 Safari 中打开」，在 Safari 里添加到主屏幕，最后在主屏幕的图标里解锁。</b>' + where }
-      : { kind: 'inapp-android', text: '你现在是在微信或 QQ 里打开的。<b>建议点右上角的「…」，选「在浏览器打开」，在浏览器里解锁。</b>' + where };
+    return ios ? { kind: 'inapp-ios', text: '你是在微信或 QQ 里打开的。<b>点右上角「…」→「在 Safari 中打开」→ 添加到主屏幕 → 在主屏幕的图标里解锁。</b>', more: where }
+      : { kind: 'inapp-android', text: '你是在微信或 QQ 里打开的。<b>点右上角「…」→「在浏览器打开」，在浏览器里解锁。</b>', more: where };
   }
   if (!ios || standalone) return null;
   const tail = '浏览器里和主屏幕上的应用是分开存的：在浏览器里解锁了，加到主屏幕后还会再锁一次（那边的设备码也不一样）。';
-  if (/FxiOS/.test(ua)) return { kind: 'ios-firefox', text: '<b>建议用 Safari 打开这个网址，点分享按钮，选「添加到主屏幕」，再在主屏幕的图标里解锁。</b>' + tail };
-  if (/CriOS|EdgiOS/.test(ua)) return { kind: 'ios-other', text: '<b>建议先添加到主屏幕（点浏览器里的分享按钮，选「添加到主屏幕」），再在主屏幕的图标里解锁。</b>' + tail };
-  return { kind: 'ios-safari', text: '<b>建议先添加到主屏幕（点底部或顶部的分享按钮，选「添加到主屏幕」），再在主屏幕的图标里解锁。</b>' + tail };
+  if (/FxiOS/.test(ua)) return { kind: 'ios-firefox', text: '<b>建议用 Safari 打开这个网址，点分享按钮 →「添加到主屏幕」，再在主屏幕的图标里解锁。</b>', more: tail };
+  if (/CriOS/.test(ua)) return { kind: 'ios-other', text: '<b>建议先添加到主屏幕（点地址栏右边的分享按钮 →「添加到主屏幕」），再在主屏幕的图标里解锁。</b>', more: tail };
+  if (/EdgiOS/.test(ua)) return { kind: 'ios-other', text: '<b>建议先添加到主屏幕（点底部的「…」→「分享」→「添加到主屏幕」），再在主屏幕的图标里解锁。</b>', more: tail };
+  return { kind: 'ios-safari', text: '<b>建议先添加到主屏幕（点分享按钮 →「添加到主屏幕」），再在主屏幕的图标里解锁。</b>', more: tail };
 }
 const hintHere = () => lockHint(navigator.userAgent || '', navigator.platform || '', navigator.maxTouchPoints || 0,
   navigator.standalone === true || !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches));
@@ -45,20 +47,26 @@ function showLock({ device, message = '', preset = '', tryCode }) {
   root.className = 'lockscr';
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-label', '这台设备还没有解锁');
+  // 一屏放下（v0.16）：设备码、复制、粘贴框、解锁同时看得见；次要的说明收进「怎么用」。手机横屏时左右两栏（样式表）
   root.innerHTML = '<div class="lockcard">'
+    + '<div class="lockleft">'
     + '<h2>这台设备还没有解锁</h2>'
-    + '<p>每台设备第一次打开脑雾克星都要一个启动码。<b>把下面的设备码发给作者，换一个启动码填在下面。</b></p>'
+    + '<p class="lockwhy"><b>把下面的设备码发给作者，换一个启动码填在下面。</b></p>'
     + '<div class="lockdevlbl">本机设备码</div>'
-    + '<div class="lockdev" data-code="' + esc(device) + '">' + esc(showDevice(device)) + '</div>'
-    + '<div class="lockrow"><button type="button" class="primary" data-act="copy">复制设备码</button><span class="lockcopied muted small" aria-live="polite"></span></div>'
+    + '<div class="lockdevrow"><div class="lockdev" data-code="' + esc(device) + '">' + esc(showDevice(device)) + '</div>'
+    + '<button type="button" class="primary" data-act="copy">复制设备码</button></div>'
+    + '<span class="lockcopied muted small" aria-live="polite"></span>'
     + '<input class="lockcopybox" readonly hidden aria-label="设备码">'
-    + (hint ? '<p class="lockhint" data-hint="' + hint.kind + '">' + hint.text + '</p>' : '')
+    + (hint ? '<div class="lockhint" data-hint="' + hint.kind + '">' + hint.text + '</div>' : '')
+    + '</div><div class="lockright">'
     + '<label class="lockdevlbl" for="lockinput">启动码</label>'
-    + '<textarea id="lockinput" class="lockinput" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="把作者发来的启动码粘贴在这里（以 NW1. 开头）"></textarea>'
-    + '<div class="lockrow"><button type="button" class="primary" data-act="unlock">解锁</button></div>'
-    + '<p class="lockmsg" role="alert"></p>'
-    + '<p class="muted small">你的进度存在这台设备上：上锁、过期、解锁都不会动它。</p>'
-    + '</div>';
+    + '<textarea id="lockinput" class="lockinput" rows="2" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="把作者发来的启动码粘贴在这里（以 NW1. 开头）"></textarea>'
+    + '<div class="lockrow"><button type="button" class="primary" data-act="unlock">解锁</button><p class="lockmsg" role="alert"></p></div>'
+    + '<details class="lockmore"><summary>怎么用</summary>'
+    + '<p>每台设备第一次打开脑雾克星都要一个启动码：复制上面的设备码发给作者，作者回你一个启动码，粘贴在框里点「解锁」。</p>'
+    + (hint && hint.more ? '<p class="lockhintmore">' + hint.more + '</p>' : '')
+    + '<p>你的进度存在这台设备上：上锁、过期、解锁都不会动它。</p></details>'
+    + '</div></div>';
   document.body.append(root);
   document.body.classList.add('locked');
   const msg = root.querySelector('.lockmsg'), input = root.querySelector('.lockinput'), copied = root.querySelector('.lockcopied');
