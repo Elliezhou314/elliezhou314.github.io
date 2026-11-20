@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>脑雾克星</title>
+<link rel="stylesheet" href="css/style.css">
+<!-- 网页应用（tools/build_pwa.mjs 加的）：清单、iPhone 主屏幕需要的标签；这个页面不让搜索引擎收录 -->
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#161d23">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="脑雾克星">
+<meta name="application-name" content="脑雾克星">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/pwa.css">
+</head>
+<body>
+<header>
+  <h1>🧠 脑雾克星 <span class="muted small">博弈数学训练 · 鱿鱼解算内核 · 单机离线</span></h1>
+  <nav id="nav">
+    <button data-view="campaign" class="active">闯关</button>
+    <button data-view="contest">数学竞赛</button>
+    <button data-view="speed">限时速算</button>
+    <button data-view="lab">定理实验室</button>
+    <button data-view="drill">特训地图</button>
+    <button data-view="solver">解算器</button>
+    <button data-view="play">自由牌局</button>
+    <button data-view="review">复盘与漏洞</button>
+    <button data-view="preflop">翻前图</button>
+    <button data-view="help">高阶数学</button>
+  </nav>
+</header>
+<main id="app">
+  <section class="view active" id="view-campaign"></section>
+  <section class="view" id="view-contest"></section>
+  <section class="view" id="view-lab"></section>
+  <section class="view" id="view-solver"></section>
+  <section class="view" id="view-drill"></section>
+  <section class="view" id="view-play"></section>
+  <section class="view" id="view-review"></section>
+  <section class="view" id="view-preflop"></section>
+  <section class="view" id="view-help"></section>
+  <section class="view" id="view-speed"></section>
+</main>
+<!-- 模块注册表 → 预解算数据 → 各功能模块 → 启动。顺序只有两条要求：注册表最先、启动最后。 -->
+<script>
+window.addEventListener('load', function () {
+  setTimeout(function () {
+    if (window.__SQUID_READY__ || window.__SQUID_BOOTED__) return;
+    var m = document.querySelector('main');
+    if (!m) return;
+    m.innerHTML = '<div style="max-width:640px;margin:40px auto;padding:16px 20px;border:1px solid #f5b642;border-radius:10px;background:#161d23;color:#e6edf3;line-height:1.9">'
+      + "<h2 style=\"margin-top:0;color:#f5b642\">没能加载完整</h2><p>可能是第一次打开时网络断了，文件没下全。联网后刷新一次页面；离线缓存装好之后，断网也能打开。</p><p style=\"color:#8b9aa8\">还是不行的话，把浏览器里这个网站的数据清掉再打开（进度会一起清掉，先在别的设备上留好）。</p>" + '</div>';
+  }, 0);
+});
+</script>
+<script src="js/runtime.js"></script>
+<script src="data/3max-100bb.js"></script>
+<script src="data/eq169.js"></script>
+<script src="data/hu-100bb.js"></script>
+<script src="data/realization.js"></script>
+<script src="data/solutions-drills.js"></script>
+<script src="js/core/cards.js"></script>
+<script src="js/core/equity.js"></script>
+<script src="js/core/evaluator.js"></script>
+<script src="js/core/range.js"></script>
+<script src="js/engine/bot.js"></script>
+<script src="js/engine/game.js"></script>
+<script src="js/license/code.js"></script>
+<script src="js/license/device.js"></script>
+<script src="js/license/pubkey.js"></script>
+<script src="js/license/verify.js"></script>
+<script src="js/review/hindsight.js"></script>
+<script src="js/review/replay.js"></script>
+<script src="js/review/review.js"></script>
+<script src="js/solver/cfr.js"></script>
+<script src="js/solver/preflop.js"></script>
+<script src="js/solver/squid.js"></script>
+<script src="js/solver/tree.js"></script>
+<script src="js/solver/worker.js"></script>
+<script src="js/train/advice/index.js"></script>
+<script src="js/train/advice/rules.js"></script>
+<script src="js/train/advice/snapshot.js"></script>
+<script src="js/train/advice/text.js"></script>
+<script src="js/train/kuhn.js"></script>
+<script src="js/train/notebook.js"></script>
+<script src="js/train/puzzles.js"></script>
+<script src="js/train/season.js"></script>
+<script src="js/train/speed.js"></script>
+<script src="js/train/training.js"></script>
+<script src="js/train/variants/betting.js"></script>
+<script src="js/train/variants/common.js"></script>
+<script src="js/train/variants/counting.js"></script>
+<script src="js/train/variants/draws.js"></script>
+<script src="js/train/variants/index.js"></script>
+<script src="js/train/variants/ranges.js"></script>
+<script src="js/train/variants/record.js"></script>
+<script src="js/train/variants/showdown.js"></script>
+<script src="js/train/variants/types.js"></script>
+<script src="js/ui/app.js"></script>
+<script src="js/ui/betspot.js"></script>
+<script src="js/ui/boot.js"></script>
+<script src="js/ui/bubble.js"></script>
+<script src="js/ui/cards.js"></script>
+<script src="js/ui/chart.js"></script>
+<script src="js/ui/clearcard.js"></script>
+<script src="js/ui/contest/variant.js"></script>
+<script src="js/ui/contest/verify.js"></script>
+<script src="js/ui/data.js"></script>
+<script src="js/ui/dom.js"></script>
+<script src="js/ui/feltrect.js"></script>
+<script src="js/ui/fx.js"></script>
+<script src="js/ui/leaveguard.js"></script>
+<script src="js/ui/lock.js"></script>
+<script src="js/ui/mobilenav.js"></script>
+<script src="js/ui/play/heroact.js"></script>
+<script src="js/ui/play/shell.js"></script>
+<script src="js/ui/progress.js"></script>
+<script src="js/ui/replay/equitypanel.js"></script>
+<script src="js/ui/replay/replay.js"></script>
+<script src="js/ui/review/advice.js"></script>
+<script src="js/ui/review/advicego.js"></script>
+<script src="js/ui/review/growth.js"></script>
+<script src="js/ui/review/history.js"></script>
+<script src="js/ui/review/leaks.js"></script>
+<script src="js/ui/review/mistakes.js"></script>
+<script src="js/ui/review/transfer.js"></script>
+<script src="js/ui/router.js"></script>
+<script src="js/ui/selftest.js"></script>
+<script src="js/ui/services.js"></script>
+<script src="js/ui/settings.js"></script>
+<script src="js/ui/sfx.js"></script>
+<script src="js/ui/sfxsynth.js"></script>
+<script src="js/ui/table.js"></script>
+<script src="js/ui/tablelayout.js"></script>
+<script src="js/ui/viewport.js"></script>
+<script src="js/ui/views/campaign.js"></script>
+<script src="js/ui/views/contest.js"></script>
+<script src="js/ui/views/drill.js"></script>
+<script src="js/ui/views/help.js"></script>
+<script src="js/ui/views/lab.js"></script>
+<script src="js/ui/views/play.js"></script>
+<script src="js/ui/views/preflop.js"></script>
+<script src="js/ui/views/review.js"></script>
+<script src="js/ui/views/solver.js"></script>
+<script src="js/ui/views/speed.js"></script>
+<script src="js/ui/views/tour.js"></script>
+<script src="js/start.js"></script>
+<script src="pwa.js"></script>
+</body>
+</html>
