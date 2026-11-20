@@ -56,34 +56,48 @@ function placeBets({ W, H, R, edge, cx, cy, box, want, seats, hard }) {
   };
   const n = want.length;
   const base = want.map(clampIn);
-  const out = new Array(n);
-  const taken = [];
-  // 1) 原来的点就没问题的，原样不动
-  for (let i = 0; i < n; i++) {
-    if (free(base[i], i, taken)) { out[i] = { x: base[i].x, y: base[i].y, moved: false }; taken.push(rectAt(base[i])); }
-  }
-  // 2) 有问题的：从原来的点往外一圈一圈找最近的空位，同一圈里先试朝桌心的方向
   const maxR = Math.hypot(W, H) / 2;
-  for (let i = 0; i < n; i++) {
-    if (out[i]) continue;
+  /** 从原来的点往外一圈一圈找最近的空位（原来的点本身空着就是它），同一圈里先试朝桌心的方向；找不到给 null */
+  function search(i, taken) {
     const b = base[i];
+    if (free(b, i, taken)) return b;
     const a0 = Math.atan2(cy - b.y, cx - b.x);
-    let pick = null;
-    for (let r = STEP; r <= maxR && !pick; r += STEP) {
+    for (let r = STEP; r <= maxR; r += STEP) {
       const k = Math.max(12, Math.ceil((2 * Math.PI * r) / 2));
-      for (let j = 0; j < k && !pick; j++) {
+      for (let j = 0; j < k; j++) {
         // 0, +1, -1, +2, -2 …：从朝桌心的方向往两边摆开
         const step = j % 2 ? (j + 1) / 2 : -j / 2;
         const a = a0 + (step * 2 * Math.PI) / k;
         const p = { x: b.x + r * Math.cos(a), y: b.y + r * Math.sin(a) };
-        if (free(p, i, taken)) pick = p;
+        if (free(p, i, taken)) return p;
       }
     }
-    const p = pick || b;   // 实在找不到就留在原处（几何检查会报出来）
-    out[i] = { x: p.x, y: p.y, moved: !!pick };
-    taken.push(rectAt(p));
+    return null;
   }
-  return out.map((p) => ({ ...p, box: rectAt(p) }));
+  /** 摆一遍。first 里的座位最先找位置（可以挪），其余的照原来的规矩：原来的点没问题的原样不动，再按座位顺序给要挪的找位置 */
+  function attempt(first) {
+    const out = new Array(n), taken = [], failed = [];
+    const put = (i, p, moved) => { out[i] = { x: p.x, y: p.y, moved }; taken.push(rectAt(p)); };
+    for (const i of first) { const p = search(i, taken); if (p) put(i, p, p !== base[i]); }
+    // 1) 原来的点就没问题的，原样不动
+    for (let i = 0; i < n; i++) if (!out[i] && !first.includes(i) && free(base[i], i, taken)) put(i, base[i], false);
+    // 2) 有问题的：找最近的空位
+    for (let i = 0; i < n; i++) {
+      if (out[i]) continue;
+      const p = search(i, taken);
+      if (p) put(i, p, p !== base[i]);
+      else { failed.push(i); put(i, base[i], false); }   // 实在找不到就留在原处（几何检查会报出来）
+    }
+    return { out, failed };
+  }
+  // 先按原来的规矩摆；有座位怎么都找不到空位时（v0.17：iPad 分屏 320 宽的 6 人桌，右下那家的空位被右上那家「原样不动」的下注占着），
+  // 让找不到的座位先挑、别的再让开，摆出来找不到的更少就用这一种。所有座位都摆得下时和原来一模一样
+  let res = attempt([]);
+  if (res.failed.length) {
+    const alt = attempt(res.failed);
+    if (alt.failed.length < res.failed.length) res = alt;
+  }
+  return res.out.map((p) => ({ ...p, box: rectAt(p) }));
 }
 
 exports.placeBets = placeBets;

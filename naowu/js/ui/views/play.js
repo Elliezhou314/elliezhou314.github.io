@@ -198,8 +198,10 @@ function buildPlayView() {
     }
     if (!idle) { actionsEl.append(h('span', { class: 'muted dockmsg' }, eng.over || eng.isHeroTurn() ? '…' : '等待对手…')); return; }
     if (eng.over) {
+      // 一句话：谁拿到多少、你本手输赢多少（v0.17）。各个池、谁亮了什么牌型写在「记录」一栏的「结果」那一行
       const r = eng.result, net = r.net[eng.hero.seat];
-      actionsEl.append(h('div', { class: 'result' }, h('span', {}, '结果：', r.pots.map((p) => `${f1(p.amount)} → ${p.winners.map((w) => eng.seats[w].name).join('/')}${p.best ? '（' + p.best + '）' : ''}`).join('；')), h('b', { class: 'mono' }, ` 你本手 ${net >= 0 ? '+' : ''}${f1(net)}`)));
+      const won = eng.seats.filter((s) => r.payouts[s.seat] > 0).map((s) => `${s.name}拿到 ${f1(r.payouts[s.seat])}`).join('、');
+      actionsEl.append(h('div', { class: 'result' }, h('span', {}, won ? won + '；' : ''), h('b', { class: 'mono' }, `你本手 ${net >= 0 ? '+' : ''}${f1(net)}`)));
       actionsEl.append(h('div', { class: 'overbtns' }, nextBtn(), h('button', { onclick: () => startReplay(playState.lastRecord) }, '回放这手'), h('button', { onclick: () => reviewHand() }, '复盘这手')));
       return;
     }
@@ -208,7 +210,8 @@ function buildPlayView() {
   function appendLog() {
     const eng = playState.engine;
     const rec = eng.toRecord();
-    logEl.textContent = handToText(rec);
+    // 打完时补一行你本手的输赢（操作区只写一句，详细的各池和牌型在上面「结果」那一行）
+    logEl.textContent = handToText(rec) + (eng.over && eng.result ? `\n你本手 ${eng.result.net[eng.hero.seat] >= 0 ? '+' : ''}${f1(eng.result.net[eng.hero.seat])}` : '');
     logEl.scrollTop = logEl.scrollHeight;
   }
   function finishHand() {

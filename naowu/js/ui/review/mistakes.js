@@ -1,6 +1,6 @@
 __squidDefine('src/ui/review/mistakes.js', function (exports) {
 'use strict';
-// 「复盘与漏洞」的「错题本」签（默认签）：训练里做错的决策、数学竞赛里没一次做对的题、限时速算里最弱的题型。
+// 「复盘与漏洞」的「错题本」签（v0.11～v0.16 是默认签，v0.17 起排在「提高建议」后面）：训练里做错的决策、数学竞赛里没一次做对的题、限时速算里最弱的题型。
 // 汇总全在 train/notebook.js，这里只画；每栏没有数据时写明「还没有」和去哪儿能产生数据。
 const { STREET_NAMES } = __squidRequire('src/solver/tree.js');
 const { mistakeBook, puzzleMisses, puzzleTotals, speedWeakTypes, SPEED_SMALL_N } = __squidRequire('src/train/notebook.js');

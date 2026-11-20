@@ -23,7 +23,7 @@ const { sfx } = __squidRequire('src/ui/sfx.js');
 const { VERIFY_LABEL, wrongDirection } = __squidRequire('src/ui/contest/verify.js');
 
 // pick：选的题型（'random' 或题型 id）；q：当前这道题；其余是这道题的作答状态
-const vs = { pick: 'random', q: null, computed: null, pending: null, token: 0, hints: 0, attempts: 0, recorded: false, revealed: false };
+const vs = { pick: 'random', q: null, computed: null, pending: null, token: 0, hints: 0, attempts: 0, recorded: false, revealed: false, autoNew: null };
 
 /** 下一个种子：测试钩子给了就用它，否则随机 */
 function nextSeed() {
@@ -68,10 +68,21 @@ function finish(firstTry) {
   store.save();
 }
 
+/**
+ * 别的页面（提高建议的直达按钮）要直接出一道某个题型的题：选好题型、丢掉手上这道，下次画这个签时马上出一道。
+ * 调用方接着把数学竞赛切到变式签、切过去。
+ */
+function queueVariantType(type) {
+  if (!VARIANT_TYPE_IDS.includes(type)) return false;
+  vs.pick = type; vs.q = null; vs.token++; vs.autoNew = type;
+  return true;
+}
+
 /** 整个签：没出题时是选题型的面板，出了题是题目 */
 function variantPanel() {
   const root = h('div', { class: 'vxroot' });
-  render(root);
+  if (vs.autoNew) { const t = vs.autoNew; vs.autoNew = null; newPuzzle(root, t); }
+  if (!root.firstChild) render(root);
   return root;
 }
 
@@ -218,5 +229,6 @@ function puzzleView(root) {
   return [head, body, actions];
 }
 
+exports.queueVariantType = queueVariantType;
 exports.variantPanel = variantPanel;
 });

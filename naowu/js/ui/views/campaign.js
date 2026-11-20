@@ -1,15 +1,18 @@
 __squidDefine('src/ui/views/campaign.js', function (exports) {
 'use strict';
 // 「闯关」视图：章节、关卡、每日挑战、成就。
+const { adviceHeadline, adviceReport } = __squidRequire('src/train/advice/index.js');
 const { getPuzzle } = __squidRequire('src/train/puzzles.js');
 const { CHAPTERS, ALL_LEVELS, getLevel, rankOf, ACHIEVEMENTS, dayKey } = __squidRequire('src/train/season.js');
 const { SCENARIOS } = __squidRequire('src/train/training.js');
 const { appendTo, h, $, toast } = __squidRequire('src/ui/dom.js');
 const { starRow } = __squidRequire('src/ui/fx.js');
 const { allScenarios, levelRec, seasonData, levelStars, levelCleared, DEMO, levelUnlocked, achievementState, syncPuzzleLevelScores, todayChallenge, dailyRec, markDailyDone } = __squidRequire('src/ui/progress.js');
+const { goButton } = __squidRequire('src/ui/review/advicego.js');
 const { switchView } = __squidRequire('src/ui/router.js');
 const { store } = __squidRequire('src/ui/services.js');
 const { contestState } = __squidRequire('src/ui/views/contest.js');
+const { reviewState } = __squidRequire('src/ui/views/review.js');
 const { startDrill } = __squidRequire('src/ui/views/drill.js');
 const { showTour } = __squidRequire('src/ui/views/tour.js');
 
@@ -21,6 +24,7 @@ function buildCampaignView() {
   syncPuzzleLevelScores();   // 谜题关的星换算成赛季分
   checkDailyDone();          // 状态判定放在渲染之前，别在渲染过程中改数据
   if (DEMO) v.append(h('div', { class: 'note' }, h('b', {}, '演示模式'), '：全部关卡已解锁（URL 里带了 #demo）。这只影响解锁判定，星级与判分口径完全不变。'));
+  v.append(adviceLine());
   // 限时速算的入口：热身用，不进赛季分和星级
   const sp = store.data.speed || { best: 0 };
   v.append(h('div', { class: 'panel spentry' },
@@ -101,6 +105,15 @@ function buildCampaignView() {
   }
   ach.append(wrap);
   v.append(ach);
+}
+
+/** 顶上一行：「我的提高建议」里最弱的一项和一个直达按钮（判断全在 train/advice/，这里不记快照，只在复盘页打开时记） */
+function adviceLine() {
+  const hl = adviceHeadline(adviceReport(store.data));
+  return h('div', { class: 'panel advline' },
+    h('div', { class: 'small advlinetext' }, hl.line),
+    h('div', { class: 'advlinebtns' }, goButton(hl.action, true),
+      h('button', { 'data-act': 'advice-all', onclick: () => { reviewState.tab = 'advice'; switchView('review'); } }, '看全部建议')));
 }
 
 function buildDailyCard() {

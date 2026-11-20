@@ -525,6 +525,11 @@ body.playfit main{max-width:1640px;padding-top:8px;padding-bottom:0}
   .playdock .playact{flex-wrap:wrap}
 }
 @media (min-width:701px) and (min-height:501px){
+  /* 操作区在牌桌正下方居中（v0.17）：牌桌靠牌桌区的下沿摆，操作区的内容贴着上沿、左右居中（牌桌本来就在这一栏里居中） */
+  .ptable.fit{align-items:flex-end}
+  .playdock{justify-content:flex-start}
+  .playdock .playact{justify-content:center}
+  .playdock .playact .result{text-align:center}
   .replay .rptext .rphead h2{display:inline;font-size:14px;margin-right:6px}
   .replay .rpctl{grid-template-columns:repeat(4,minmax(0,140px))}
 }
@@ -558,6 +563,32 @@ body.playfit main{max-width:1640px;padding-top:8px;padding-bottom:0}
   .rpseekrow{flex-wrap:wrap}
   .rpseekrow .rpseek{flex-basis:100%}
 }
+
+/* ---------------------------------------------------------------- 提高建议（v0.17，review/advice.js；闯关页顶上那一行） */
+/* 复盘页五个签：一排放下，窄屏时字可以折成两行（按钮仍是 44 高） */
+.rvtabs{grid-template-columns:repeat(5,minmax(0,1fr));max-width:800px}
+.rvtabs button{white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+.advlist{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+@media (min-width:900px){.advlist{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.advitem{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0;display:flex;flex-direction:column;gap:6px}
+.advitem .actions{margin:0}
+.advhead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+.advno{flex:none;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#1a1200;font:700 14px/24px var(--f-num);text-align:center}
+.advtitle{font-size:15px;line-height:1.4;min-width:0;overflow-wrap:anywhere}
+.advbasis{line-height:1.5}
+.advhow summary{cursor:pointer;color:var(--accent);font-size:13px;min-height:44px;display:flex;align-items:center}
+.advhow>div{margin:4px 0;line-height:1.6;overflow-wrap:anywhere}
+.advhow:not([open])>div{display:none}   /* 新内核里收起的 details 内容仍占着布局位置（只是不画），量「最低元素」时会算进去 */
+.advrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.advrow .small{flex:1;min-width:0;line-height:1.5}
+.advrow button{flex:none}
+.advcmp{font-size:13px;line-height:1.6}
+.advnone{margin:8px 0;line-height:1.6}
+.advempty{margin-top:6px}
+.advline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.advline .advlinetext{flex:1 1 260px;min-width:0;line-height:1.5}
+.advlinebtns{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:420px){.advrow{flex-direction:column;align-items:stretch}.advrow button{align-self:flex-start}}
 
 /* 锁屏的样式（v0.16 从 style.css 拆出来；打包时接在 style.css、layout.css 后面拼成一份 css/style.css） */
 /* 锁屏（v0.15，ui/lock.js）：盖住整页，游戏在解锁之前不启动。不用 inset 简写（旧安卓内核不认），四个方向分开写。

@@ -8,6 +8,7 @@ const { COMBOS, COMBO_COUNT, NOTATION_TO_COMBOS, comboToNotation, comboToPretty,
 const { sampleCombo, removeDead, parseRange } = __squidRequire('src/core/range.js');
 const { emptySpeedRecord, coerceSpeedRecord } = __squidRequire('src/train/speed.js');
 const { emptyVariantRecord, coerceVariantRecord, variantTotals } = __squidRequire('src/train/variants/record.js');
+const { emptyAdviceRecord, coerceAdviceRecord } = __squidRequire('src/train/advice/snapshot.js');
 
 // ---------------------------------------------------------------------------
 // 预置场景（范围是示例起点，都可以在界面里改；筹码单位 = 大盲）
@@ -62,6 +63,7 @@ const emptyProgress = () => ({
   settings: { sfx: false },   // 界面设置：音效开关（默认关）
   speed: emptySpeedRecord(),  // 限时速算：{ best 最好成绩（答对数）, runs 60 秒挑战的局数, byType 各题型累计对错, history 逐局历史（v0.11 起，最多 200 局） }
   variants: emptyVariantRecord(),  // 数学竞赛的变式练习（v0.13）：{ byType: { P01: { done 做了几道, firstTry 其中第一次就答对的 }, … } }
+  advice: emptyAdviceRecord(),     // 「我的提高建议」的快照（v0.17）：{ snaps: [{ day, time, kind, key, name, n, ok, loss }] }，每天最多一份，最多 10 份
 });
 
 /**
@@ -142,6 +144,8 @@ function coerceProgress(raw) {
   d.speed = coerceSpeedRecord(raw.speed);
   // 变式练习的记录（v0.13 加的字段）：只认非负整数、第一次就答对的不超过做了的、不认识的题型丢掉，规则在 variants/record.js。旧存档没有这个字段时给空记录。
   d.variants = coerceVariantRecord(raw.variants);
+  // 提高建议的快照（v0.17 加的字段）：不合法的快照整份丢掉、同一天留最晚的一份、最多 10 份，规则在 advice/snapshot.js。旧存档没有这个字段时给空记录。
+  d.advice = coerceAdviceRecord(raw.advice);
   if (raw.puzzles && typeof raw.puzzles === 'object' && !Array.isArray(raw.puzzles)) {
     for (const [k, v] of Object.entries(raw.puzzles)) {
       if (!v || typeof v !== 'object' || Array.isArray(v)) continue;
